@@ -73,19 +73,19 @@ function M.is_direction(s)
   return DIRECTIONS[s] == true
 end
 
--- Door / exit / portal tokens. After parse_count strips a leading count
--- and article, a "door" segment reduces to one of these words. Setting
--- ignoring_exits = true makes the walker silently consume the direction
--- that follows (so the door's location doesn't become a "room" the user
--- has to filter out). Tracks tt_dw mdt.tin:571 — the literals there are
--- pre-substitution; ours are post-substitution.
-local DOOR_TOKENS = {
-  door = true,
-  doors = true,
-  exit = true,
-  exits = true,
-  ["hard to see through exit"] = true,
-}
+-- Detect a door/exit segment by prefix. After parse_count strips count +
+-- article, a segment like "door" / "doors" / "exit" / "exits" / "hard to
+-- see through exit" / "exit south of one west" all qualify. Word-boundary
+-- check (space or end-of-string) avoids false positives on hypothetical
+-- NPCs like "doorman" or "exitsmith".
+local function is_door_segment(rest)
+  for _, keyword in ipairs({"door", "doors", "exit", "exits", "hard to see through exit"}) do
+    if rest == keyword or rest:sub(1, #keyword + 1) == keyword .. " " then
+      return true
+    end
+  end
+  return false
+end
 
 -- Short forms of every direction word the walker may encounter.
 local SHORT_DIRECTION = {
@@ -173,9 +173,10 @@ function M.parse(input)
     else
       local count, rest = M.parse_count(segment)
 
-      if DOOR_TOKENS[rest] then
-        -- A door / exit reference. Suppress the direction that follows
-        -- so it doesn't become a "room" of its own.
+      if is_door_segment(rest) then
+        -- A door / exit reference (bare or with embellishments like
+        -- "exit south of one west"). Suppress the direction that
+        -- follows so it doesn't become a "room" of its own.
         ignoring_exits = true
       else
         local first_word = rest:match("^([%a]+)")

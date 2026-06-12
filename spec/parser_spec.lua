@@ -123,6 +123,21 @@ describe("parser.parse", function()
     assert.equals("watchman", rooms[1].entities[1].label)
   end)
 
+  it("ignores 'exit <direction> of <count> <direction>' descriptions", function()
+    -- Real Discworld emission shape captured from user's manual test:
+    -- "an exit south of one west, a spineless lawyer, a watchman and a depressed accountant are west, ..."
+    -- The "an exit south of one west" segment must be recognised as a door
+    -- token, not treated as an entity.
+    local input = "an exit south of one west, a spineless lawyer, a watchman and a depressed accountant are west, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals("1 w", rooms[1].direction)
+    assert.equals(3, #rooms[1].entities)
+    assert.equals("spineless lawyer", rooms[1].entities[1].label)
+    assert.equals("watchman", rooms[1].entities[2].label)
+    assert.equals("depressed accountant", rooms[1].entities[3].label)
+  end)
+
   it("handles doubled MXP wrappers (player + title), keeping outer colour", function()
     -- Synthetic input mirroring Discworld's player-with-title MXP shape:
     --   outer wrapper carries the player's class/guild colour;
