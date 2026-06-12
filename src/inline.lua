@@ -48,15 +48,20 @@ local function format_direction(s)
 end
 
 local function emit_room(room)
+  -- Use string.format("%d", …) for numeric columns: Mallard settings of
+  -- type="number" come back as Lua floats (settings.rs stores them as
+  -- f64), so score arithmetic yields floats. Lua's `..` concat formats
+  -- those as "2.0"; the panel side hides this because JS doesn't render
+  -- the trailing zero, but inline notes go through Lua tostring.
   local spans = {
     mud.span(format_direction(room.direction) .. " ", { fg = "#88aaff", bold = true }),
-    mud.span("[" .. room.total_score .. "] ", { fg = "#888888" }),
+    mud.span(string.format("[%d] ", room.total_score), { fg = "#888888" }),
   }
   for i, e in ipairs(room.entities) do
     if i > 1 then
       spans[#spans + 1] = mud.span(", ", { fg = "#555555" })
     end
-    local label = (e.count > 1) and (e.count .. " " .. e.label) or e.label
+    local label = (e.count > 1) and (string.format("%d %s", e.count, e.label)) or e.label
     spans[#spans + 1] = mud.span(label, colour_to_style(e.colour))
   end
   mud.note(table.unpack(spans))
