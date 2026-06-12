@@ -1,5 +1,17 @@
 local parser = require("parser")
 
+local function load_fixture(name)
+  local f = assert(io.open("spec/fixtures/" .. name, "r"))
+  local s = f:read("*a")
+  f:close()
+  -- Substitute "ESC" placeholder for the real \27 byte so the fixture file
+  -- stays human-editable.
+  s = s:gsub("ESC", "\27")
+  -- Strip a single trailing newline (text editors add one).
+  s = s:gsub("\n$", "")
+  return s
+end
+
 describe("parser.normalise", function()
   it("lowercases input", function()
     assert.equals("a wizard", parser.normalise("A Wizard"))
@@ -70,5 +82,53 @@ describe("parser.is_direction", function()
   it("rejects non-directions", function()
     assert.is_false(parser.is_direction("watchman"))
     assert.is_false(parser.is_direction(""))
+  end)
+end)
+
+describe("parser.parse", function()
+  it("returns empty list on empty input", function()
+    assert.same({}, parser.parse(""))
+  end)
+
+  it("parses a single direction with one entity", function()
+    local rooms = parser.parse(load_fixture("writtenmap_basic.txt"))
+    -- Expected: 2 rooms — { N: 1 watchman }, { NE: 2 cats, 1 dog }
+    assert.equals(2, #rooms)
+    assert.equals("1 n", rooms[1].direction)
+    assert.equals(1, #rooms[1].entities)
+    assert.equals("watchman", rooms[1].entities[1].label)
+    assert.equals(1, rooms[1].entities[1].count)
+    assert.equals("1 ne", rooms[2].direction)
+    assert.equals(2, #rooms[2].entities)
+  end)
+
+  it("preserves MXP colours on entities", function()
+    local rooms = parser.parse(load_fixture("writtenmap_mxp.txt"))
+    assert.equals(1, #rooms)
+    assert.equals(2, #rooms[1].entities)
+    -- First entity: plain "watchman", no MXP colour
+    assert.equals("watchman", rooms[1].entities[1].label)
+    assert.is_nil(rooms[1].entities[1].mxp_colour)
+    -- Second entity: "george" with hex colour
+    assert.equals("george", rooms[1].entities[2].label)
+    assert.equals("#ff0000", rooms[1].entities[2].mxp_colour)
+  end)
+
+  it("ignores door / exit prefix segments", function()
+    local rooms = parser.parse(load_fixture("writtenmap_doors.txt"))
+    -- Only the watchman room should appear; the "a door is north" segment
+    -- is the door-prefix marker and contributes no entities.
+    assert.equals(1, #rooms)
+    assert.equals("1 e", rooms[1].direction)
+    assert.equals("watchman", rooms[1].entities[1].label)
+  end)
+
+  it("flushes on the vision sentinel", function()
+    -- Two rooms separated by the sentinel.
+    local input = "a cat is north, the limit of your vision is here. a dog is south, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals(2, #rooms)
+    assert.equals("1 n", rooms[1].direction)
+    assert.equals("1 s", rooms[2].direction)
   end)
 end)
