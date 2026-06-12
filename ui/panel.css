@@ -14,7 +14,7 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
 
 .entity { display: inline; }
 .entity + .entity::before { content: ", "; color: #555; }
-.count { color: #999; margin-right: 2px; }
+.count { margin-right: 2px; }
 
 .c-red     { color: #f55; }
 .c-yellow  { color: #fd5; }
