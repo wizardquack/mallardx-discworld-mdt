@@ -67,13 +67,18 @@ local function emit_row(dir_str, dir_width, room)
   mud.note(table.unpack(spans))
 end
 
-function M.register()
+-- `on_scored` is an optional callback invoked with the scored room list
+-- (same shape pipeline.score_payload returns). main.lua passes its
+-- panel-push so the manual `map door text` command refreshes the panel
+-- alongside emitting inline notes.
+function M.register(on_scored)
   -- Mallard trigger patterns are Rust regex (not Lua patterns). The `.*`
   -- between "is " and "here." (not `.+`) lets the empty-rooms case match:
   -- "the limit of your vision is here." with no preceding entities.
   mud.trigger("the limit of your vision is .*here\\.$", function(m)
     m:gag()
     local scored = pipeline.score_payload(m.text)
+    if on_scored then on_scored(scored) end
     -- Pre-compute formatted directions so we can align the score column
     -- to the widest direction across this batch of rooms.
     local rows = {}

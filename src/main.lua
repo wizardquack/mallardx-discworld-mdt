@@ -16,9 +16,11 @@ local inline   = require("inline")
 
 local panel = mud.panel("mdt")
 
-local function refresh(payload)
-  local scored = pipeline.score_payload(payload)
-  -- Flatten to the panel's shape: { direction, score, entities }.
+-- Flatten the pipeline's scored output to the panel's shape and push it.
+-- Both the GMCP room.writtenmap path and the inline map-door-text trigger
+-- call this so the panel stays in sync with whichever payload arrived
+-- most recently.
+local function push_panel(scored)
   local rooms = {}
   for _, s in ipairs(scored) do
     rooms[#rooms + 1] = {
@@ -37,12 +39,12 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
     mud.note("[mdt] unexpected room.writtenmap payload shape", { fg = "yellow" })
     return
   end
-  refresh(payload)
+  push_panel(pipeline.score_payload(payload))
 end)
 
 -- ─── Commands + inline trigger ──────────────────────────────────────────
 
-inline.register()
+inline.register(push_panel)
 
 commands.register(function()
   if panel.open then panel:open() end
