@@ -1,6 +1,10 @@
 * { box-sizing: border-box; }
+:root {
+  --bg: #1a1a1a;
+  --fg: #ddd;
+}
 html, body { margin: 0; padding: 0; height: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
-body { background: var(--panel-bg, #111); color: var(--panel-fg, #ddd); padding: 4px 6px; }
+body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
 
 #rooms { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 8px; }
 
