@@ -21,14 +21,12 @@ local NAMED_HEX = {
   grey    = "#888888",
 }
 
--- Body-text fg for inline notes. Uses the ANSI palette name "white"
--- (parse_color → 0xff000000|7 → packedToCss → "var(--ansi-7)") so the
--- value tracks the active theme rather than locking to a single hex.
--- For most dark themes --ansi-7 is the same shade as the panel's --fg
--- (Dracula in particular: ansi-7 = fg = #f8f8f2). Mallard doesn't expose
--- theme tokens to Lua plugins, so this is the closest we can get without
--- subscribing to a theme-push event.
-local DEFAULT_FG = "white"
+-- Body-text fg for inline notes. Matches the dark theme's `--fg` and the
+-- panel.css fallback so uncoloured entities look the same in both surfaces.
+-- (Mallard renders `mud.note` lines with the system style class, which
+-- defaults to a dimmer grey + italic; setting fg + italic=false on every
+-- span overrides that line-level styling per-span.)
+local DEFAULT_FG = "#dddddd"
 
 local function colour_to_style(colour)
   local style = { italic = false }
