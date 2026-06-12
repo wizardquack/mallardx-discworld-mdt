@@ -2,9 +2,6 @@
 
 A [Mallard](https://mallard.vnsf.xyz) plugin for [Discworld MUD](https://discworld.starturtle.net/lpc/) that turns the `room.writtenmap` GMCP frame into a scored "Nearby" panel.
 
-Functional equivalent of Quow Cow Bar's MDT module and tt_dw's `/mdt` —
-ported to Mallard.
-
 ## What it does
 
 Each time you move, Discworld sends a GMCP `room.writtenmap` payload listing who and what is visible in adjacent rooms (the same data you'd see by typing `map door text`). This plugin parses it and renders a sortable, scored panel:
@@ -46,7 +43,7 @@ Colours: `red`, `yellow`, `green`, `cyan`, `blue`, `magenta`, `white`, `grey`, p
 
 ## Storage
 
-Match lists are stored per-character, keyed by `char.info.name`. Until your character logs in, edits land in a `_default` bucket shared across alts.
+Match lists are stored per-character, keyed by `char.info.name`.
 
 ## Development
 
@@ -57,3 +54,8 @@ busted                    # run unit tests
 
 Spec lives at `docs/superpowers/specs/2026-06-12-mdt-v0.1-design.md`
 (gitignored — keep your local copy in sync with intent).
+
+## Credit
+
+Many thanks to Quow and Oki, whose work on similar plugins was
+invaluable in designing and building this one.
