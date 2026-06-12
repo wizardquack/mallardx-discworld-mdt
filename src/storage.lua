@@ -5,24 +5,23 @@
 -- so users can add patterns before logging in / on a freshly-installed
 -- plugin.
 --
+-- The character name is resolved from the GMCP mirror on every call
+-- rather than cached in a module upvalue. Mallard's custom `require()`
+-- (sandbox.rs:78-99) does NOT use `package.loaded` to cache module
+-- results, so each `require("storage")` returns a fresh module table
+-- with its own copy of module-private state. Reading from the GMCP
+-- mirror at call time gives a single source of truth that both
+-- main.lua's and commands.lua's instances see consistently.
+--
 -- The match list is an ordered array; see src/matcher.lua for the record
 -- shape.
 
 local M = {}
 
-local current_char = nil
-
-function M.set_character(name)
-  -- nil or empty → fall back to default bucket
-  if name == nil or name == "" then
-    current_char = nil
-  else
-    current_char = name
-  end
-end
-
 local function key()
-  return "matches:" .. (current_char or "_default")
+  local name = gmcp.get("char.info.name")
+  if name == nil or name == "" then return "matches:_default" end
+  return "matches:" .. name
 end
 
 -- Mallard's storage API accepts Lua values natively (serialised on the

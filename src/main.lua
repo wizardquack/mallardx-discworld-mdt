@@ -1,8 +1,9 @@
 -- Discworld MDT — entry point.
 --
--- Subscribes to room.writtenmap (GMCP) and char.info (for the per-character
--- storage key). Each writtenmap frame: decode JSON string → parser →
--- matcher → filter → panel:post("rooms", …).
+-- Subscribes to room.writtenmap (GMCP). Each writtenmap frame: parser →
+-- matcher → filter → panel:post("rooms", …). The per-character storage
+-- key is resolved from gmcp.get("char.info.name") at every storage call
+-- (see src/storage.lua for why caching doesn't work here).
 
 local parser   = require("parser")
 local matcher  = require("matcher")
@@ -47,8 +48,7 @@ end
 
 -- Mallard's gmcp.on hands callbacks already-decoded Lua values
 -- (cf. discworld-vitals/src/main.lua:151). For room.writtenmap the
--- payload is a JSON string → decoded to a Lua string. For char.info
--- the payload is an object → decoded to a Lua table.
+-- payload is a JSON string → decoded to a Lua string.
 gmcp.on("room.writtenmap", function(_pkg, payload)
   if type(payload) ~= "string" then
     mud.note("[mdt] unexpected room.writtenmap payload shape", { fg = "yellow" })
@@ -56,17 +56,6 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
   end
   refresh(payload)
 end)
-
-gmcp.on("char.info", function(_pkg, info)
-  if type(info) ~= "table" then return end
-  if info.name then storage.set_character(info.name) end
-end)
-
--- If char.info has already been mirrored before our subscription, seed from it.
-do
-  local existing = gmcp.get("char.info.name")
-  if existing and existing ~= "" then storage.set_character(existing) end
-end
 
 -- ─── Commands ────────────────────────────────────────────────────────────
 
