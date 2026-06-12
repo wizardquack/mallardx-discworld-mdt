@@ -205,6 +205,12 @@ function M.parse(input)
             label = name_part
           end
 
+          -- Strip any embedded ANSI SGR sequences from the label.
+          -- Discworld emits per-user auto-colouring as raw SGR (e.g.
+          -- "\27[38;5;157mNAME\27[39;49m\27[0m") inside MXP wrappers.
+          -- The user's match list rules entity colour, not server SGR.
+          label = (label:gsub("\27%[[0-9;]*m", ""))
+
           entities[#entities + 1] = {
             raw = segment,
             label = label,

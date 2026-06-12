@@ -138,6 +138,21 @@ describe("parser.parse", function()
     assert.equals("depressed accountant", rooms[1].entities[3].label)
   end)
 
+  it("strips embedded ANSI SGR sequences from entity labels", function()
+    -- Real Discworld emission captured from the user's manual test:
+    -- per-user auto-colouring wraps the player name in SGR escapes ON TOP
+    -- of any MXP wrapper. The label that reaches the panel must be just
+    -- the bare name with no escape bytes.
+    local input = "a watchman and "
+      .. "\27[38;5;157mterrible kiki totally\27[39;49m\27[0m"
+      .. " are north, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals(2, #rooms[1].entities)
+    assert.equals("watchman", rooms[1].entities[1].label)
+    assert.equals("terrible kiki totally", rooms[1].entities[2].label)
+  end)
+
   it("handles doubled MXP wrappers (player + title), keeping outer colour", function()
     -- Synthetic input mirroring Discworld's player-with-title MXP shape:
     --   outer wrapper carries the player's class/guild colour;
