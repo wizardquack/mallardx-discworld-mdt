@@ -47,14 +47,14 @@ local function format_direction(s)
   return table.concat(parts, ", ")
 end
 
-local function emit_room(room)
+local function emit_row(dir_str, dir_width, room)
   -- Use string.format("%d", …) for numeric columns: Mallard settings of
   -- type="number" come back as Lua floats (settings.rs stores them as
   -- f64), so score arithmetic yields floats. Lua's `..` concat formats
   -- those as "2.0"; the panel side hides this because JS doesn't render
   -- the trailing zero, but inline notes go through Lua tostring.
   local spans = {
-    mud.span(format_direction(room.direction) .. " ", { fg = "#88aaff", bold = true }),
+    mud.span(string.format("%-" .. dir_width .. "s ", dir_str), { fg = "#88aaff", bold = true }),
     mud.span(string.format("[%d] ", room.total_score), { fg = "#888888" }),
   }
   for i, e in ipairs(room.entities) do
@@ -74,8 +74,17 @@ function M.register()
   mud.trigger("the limit of your vision is .*here\\.$", function(m)
     m:gag()
     local scored = pipeline.score_payload(m.text)
+    -- Pre-compute formatted directions so we can align the score column
+    -- to the widest direction across this batch of rooms.
+    local rows = {}
+    local max_dir_width = 0
     for _, room in ipairs(scored) do
-      emit_room(room)
+      local dir = format_direction(room.direction)
+      if #dir > max_dir_width then max_dir_width = #dir end
+      rows[#rows + 1] = { dir = dir, room = room }
+    end
+    for _, r in ipairs(rows) do
+      emit_row(r.dir, max_dir_width, r.room)
     end
   end)
 end
