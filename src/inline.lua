@@ -21,14 +21,29 @@ local NAMED_HEX = {
   grey    = "#888888",
 }
 
+-- Body-text fg for inline notes. Matches the dark theme's `--fg` and the
+-- panel.css fallback so uncoloured entities look the same in both surfaces.
+-- (Mallard renders `mud.note` lines with the system style class, which
+-- defaults to a dimmer grey + italic; setting fg + italic=false on every
+-- span overrides that line-level styling per-span.)
+local DEFAULT_FG = "#dddddd"
+
 local function colour_to_style(colour)
-  if not colour or colour == "" then return {} end
-  if colour:sub(1, 1) == "#" then return { fg = colour } end
-  local bold_name = colour:match("^bold%-(.+)$")
-  if bold_name then
-    return { fg = NAMED_HEX[bold_name] or bold_name, bold = true }
+  local style = { italic = false }
+  if not colour or colour == "" then
+    style.fg = DEFAULT_FG
+  elseif colour:sub(1, 1) == "#" then
+    style.fg = colour
+  else
+    local bold_name = colour:match("^bold%-(.+)$")
+    if bold_name then
+      style.fg = NAMED_HEX[bold_name] or bold_name
+      style.bold = true
+    else
+      style.fg = NAMED_HEX[colour] or colour
+    end
   end
-  return { fg = NAMED_HEX[colour] or colour }
+  return style
 end
 
 -- Tighten "1 nw, 2 w" → "nw, 2w" (mirrors panel.js's formatDirection so
@@ -54,12 +69,14 @@ local function emit_row(dir_str, dir_width, room)
   -- those as "2.0"; the panel side hides this because JS doesn't render
   -- the trailing zero, but inline notes go through Lua tostring.
   local spans = {
-    mud.span(string.format("%-" .. dir_width .. "s ", dir_str), { fg = "#88aaff", bold = true }),
-    mud.span(string.format("[%d] ", room.total_score), { fg = "#888888" }),
+    mud.span(string.format("%-" .. dir_width .. "s ", dir_str),
+             { fg = "#88aaff", bold = true, italic = false }),
+    mud.span(string.format("[%d] ", room.total_score),
+             { fg = "#888888", italic = false }),
   }
   for i, e in ipairs(room.entities) do
     if i > 1 then
-      spans[#spans + 1] = mud.span(", ", { fg = "#555555" })
+      spans[#spans + 1] = mud.span(", ", { fg = "#555555", italic = false })
     end
     local label = (e.count > 1) and (string.format("%d %s", e.count, e.label)) or e.label
     spans[#spans + 1] = mud.span(label, colour_to_style(e.colour))
