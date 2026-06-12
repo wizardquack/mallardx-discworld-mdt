@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
+body { background: var(--panel-bg, #111); color: var(--panel-fg, #ddd); padding: 4px 6px; }
+
+#rooms { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 8px; }
+
+.dir { color: #8af; font-weight: bold; }
+.score { color: #888; text-align: right; }
+.entities { white-space: normal; }
+
+.entity { display: inline; }
+.entity + .entity::before { content: ", "; color: #555; }
+.count { color: #999; margin-right: 2px; }
+
+.c-red     { color: #f55; }
+.c-yellow  { color: #fd5; }
+.c-green   { color: #5f5; }
+.c-cyan    { color: #5ff; }
+.c-blue    { color: #88f; }
+.c-magenta { color: #f5f; }
+.c-white   { color: #fff; }
+.c-grey    { color: #888; }
+.c-bold-red     { color: #f55; font-weight: bold; }
+.c-bold-yellow  { color: #fd5; font-weight: bold; }
+.c-bold-green   { color: #5f5; font-weight: bold; }
+.c-bold-cyan    { color: #5ff; font-weight: bold; }
+.c-bold-blue    { color: #88f; font-weight: bold; }
+.c-bold-magenta { color: #f5f; font-weight: bold; }
+.c-bold-white   { color: #fff; font-weight: bold; }
+
+#empty { padding: 8px; color: #666; font-style: italic; }
