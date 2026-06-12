@@ -116,15 +116,29 @@ function M.parse(input)
 
   -- Stage 1: replace each MXP wrapper with "\1IDX\2NAME\1" so the
   -- name survives normalisation as a single non-letter-bounded token,
-  -- and the colour can be looked up by index later.
+  -- and the colour can be looked up by index later. Doubled wrappers
+  -- (player + title, e.g. `\27[4zmxp<#aaamxp>\27[4zmxp<#bbbmxp>NAME\27[3z\27[3z`)
+  -- must be handled BEFORE the single-wrapper pattern, otherwise the
+  -- single pattern's lazy `.-` swallows the inner wrapper into the name.
+  -- For doubled wrappers the OUTER colour wins.
   local colour_registry = {}
-  local tagged = input:gsub("\27%[4zmxp<(.-)mxp>(.-)\27%[3z",
-    function(colour_spec, name)
-      if colour_spec:sub(1, 2) == "c " then colour_spec = colour_spec:sub(3) end
-      local idx = #colour_registry + 1
-      colour_registry[idx] = colour_spec
-      return "\1" .. idx .. "\2" .. name .. "\1"
+  local function record_colour(colour_spec, name)
+    if colour_spec:sub(1, 2) == "c " then colour_spec = colour_spec:sub(3) end
+    local idx = #colour_registry + 1
+    colour_registry[idx] = colour_spec
+    return "\1" .. idx .. "\2" .. name .. "\1"
+  end
+  -- Pass A: doubled wrappers. Outer colour is captured; inner colour
+  -- (capture group 2) is discarded by ignoring it in the replacement.
+  local tagged = input:gsub(
+    "\27%[4zmxp<(.-)mxp>\27%[4zmxp<(.-)mxp>(.-)\27%[3z\27%[3z",
+    function(outer_colour, _inner_colour, name)
+      return record_colour(outer_colour, name)
     end)
+  -- Pass B: any remaining single wrappers.
+  tagged = tagged:gsub(
+    "\27%[4zmxp<(.-)mxp>(.-)\27%[3z",
+    record_colour)
 
   -- Stage 2: standard normalisation (lowercase, conjunctions → comma,
   -- sentinel marker). MXP markers are non-letter and unaffected.

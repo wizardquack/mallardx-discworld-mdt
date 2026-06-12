@@ -123,6 +123,24 @@ describe("parser.parse", function()
     assert.equals("watchman", rooms[1].entities[1].label)
   end)
 
+  it("handles doubled MXP wrappers (player + title), keeping outer colour", function()
+    -- Synthetic input mirroring Discworld's player-with-title MXP shape:
+    --   outer wrapper carries the player's class/guild colour;
+    --   inner wrapper carries the rank/title colour.
+    -- Outer colour should win; the resulting label is just NAME (no markup).
+    local input = "a watchman and "
+      .. "\27[4zmxp<c #00ff00mxp>"  -- outer open: green
+      .. "\27[4zmxp<c #ffffffmxp>"  -- inner open: white
+      .. "captain"                     -- name
+      .. "\27[3z\27[3z"                -- inner close, outer close
+      .. " are north, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals(2, #rooms[1].entities)
+    assert.equals("captain", rooms[1].entities[2].label)
+    assert.equals("#00ff00", rooms[1].entities[2].mxp_colour)
+  end)
+
   it("flushes on the vision sentinel", function()
     -- Two rooms separated by the sentinel.
     local input = "a cat is north, the limit of your vision is here. a dog is south, the limit of your vision is here."
