@@ -1,54 +1,37 @@
 -- Discworld MDT — entry point.
 --
--- Subscribes to room.writtenmap (GMCP). Each writtenmap frame: parser →
--- matcher → filter → panel:post("rooms", …). The per-character storage
--- key is resolved from gmcp.get("char.info.name") at every storage call
--- (see src/storage.lua for why caching doesn't work here).
+-- Wires three things together:
+--   1. The "Nearby" panel, fed by GMCP room.writtenmap pushes.
+--   2. The mdt slash commands (mdt add / remove / list / clear).
+--   3. The inline map-door-text trigger, which gags the textual sentinel
+--      line and re-emits a styled version in the game-output pane.
+--
+-- The shared parse→score→filter→sort→cap pipeline lives in
+-- src/pipeline.lua so both the panel push and the inline trigger use one
+-- implementation.
 
-local parser   = require("parser")
-local matcher  = require("matcher")
-local storage  = require("storage")
+local pipeline = require("pipeline")
 local commands = require("commands")
+local inline   = require("inline")
 
 local panel = mud.panel("mdt")
 
--- Settings accessor — falls back to defaults if Mallard hasn't loaded
--- settings yet (e.g. during early init).
-local function setting(name, default)
-  local v = settings.get(name)
-  if v == nil then return default end
-  return v
-end
-
 local function refresh(payload)
-  local rooms = parser.parse(payload)
-  local match_list = storage.load()
-  local default_score = setting("default_score", 1)
-  local min_score = setting("min_score", 0)
-  local max_rooms = setting("max_rooms", 20)
-
-  local scored = {}
-  for _, room in ipairs(rooms) do
-    local s = matcher.score_room(room, match_list, default_score)
-    if s.total_score >= min_score then
-      scored[#scored + 1] = {
-        direction = s.direction,
-        score = s.total_score,
-        entities = s.entities,
-      }
-    end
+  local scored = pipeline.score_payload(payload)
+  -- Flatten to the panel's shape: { direction, score, entities }.
+  local rooms = {}
+  for _, s in ipairs(scored) do
+    rooms[#rooms + 1] = {
+      direction = s.direction,
+      score = s.total_score,
+      entities = s.entities,
+    }
   end
-  table.sort(scored, function(a, b) return a.score > b.score end)
-  while #scored > max_rooms do table.remove(scored) end
-
-  panel:post("rooms", { rooms = scored })
+  panel:post("rooms", { rooms = rooms })
 end
 
 -- ─── GMCP wiring ─────────────────────────────────────────────────────────
 
--- Mallard's gmcp.on hands callbacks already-decoded Lua values
--- (cf. discworld-vitals/src/main.lua:151). For room.writtenmap the
--- payload is a JSON string → decoded to a Lua string.
 gmcp.on("room.writtenmap", function(_pkg, payload)
   if type(payload) ~= "string" then
     mud.note("[mdt] unexpected room.writtenmap payload shape", { fg = "yellow" })
@@ -57,10 +40,10 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
   refresh(payload)
 end)
 
--- ─── Commands ────────────────────────────────────────────────────────────
+-- ─── Commands + inline trigger ──────────────────────────────────────────
+
+inline.register()
 
 commands.register(function()
-  -- `mdt` with no args → focus/open panel. The panel API uses :open()
-  -- on the handle if available; otherwise this is a no-op.
   if panel.open then panel:open() end
 end)
