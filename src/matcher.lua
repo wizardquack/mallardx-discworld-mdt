@@ -25,7 +25,7 @@ function M.score_entity(entity, match_list, default_score)
     label = entity.label,
     count = entity.count,
     score = default_score,
-    colour = entity.mxp_colour,  -- baseline; may be overwritten by match
+    colour = entity.mxp_colour or entity.sgr_colour,  -- baseline; may be overwritten by match
   }
   for _, entry in ipairs(match_list) do
     if matches(entity.label, entry) then

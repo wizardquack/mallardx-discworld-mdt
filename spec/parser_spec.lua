@@ -150,7 +150,33 @@ describe("parser.parse", function()
     assert.equals(1, #rooms)
     assert.equals(2, #rooms[1].entities)
     assert.equals("watchman", rooms[1].entities[1].label)
+    assert.is_nil(rooms[1].entities[1].sgr_colour)
     assert.equals("terrible kiki totally", rooms[1].entities[2].label)
+    assert.equals("#afffaf", rooms[1].entities[2].sgr_colour)
+  end)
+
+  it("recognises basic SGR foreground colours (30-37)", function()
+    -- "\27[31m" = red dim → #aa0000
+    local input = "\27[31mfoo\27[0m is north, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals("foo", rooms[1].entities[1].label)
+    assert.equals("#aa0000", rooms[1].entities[1].sgr_colour)
+  end)
+
+  it("recognises bright SGR foreground colours (90-97)", function()
+    -- "\27[92m" = bright green → #55ff55
+    local input = "\27[92mbar\27[0m is north, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals("bar", rooms[1].entities[1].label)
+    assert.equals("#55ff55", rooms[1].entities[1].sgr_colour)
+  end)
+
+  it("recognises 24-bit truecolour SGR", function()
+    -- "\27[38;2;128;64;200m" = #8040c8
+    local input = "\27[38;2;128;64;200mbaz\27[0m is north, the limit of your vision is here."
+    local rooms = parser.parse(input)
+    assert.equals("baz", rooms[1].entities[1].label)
+    assert.equals("#8040c8", rooms[1].entities[1].sgr_colour)
   end)
 
   it("handles doubled MXP wrappers (player + title), keeping outer colour", function()

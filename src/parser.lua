@@ -99,6 +99,49 @@ local SHORT_DIRECTION = {
 
 function M.short_direction(d) return SHORT_DIRECTION[d] or d end
 
+-- xterm-256 → hex conversion. Standard palette: indexes 0-15 are the 16
+-- basic colours (VGA palette), 16-231 are a 6x6x6 RGB cube, 232-255 are
+-- a 24-step greyscale.
+local SGR_BASIC = {
+  "#000000", "#aa0000", "#00aa00", "#aa5500",
+  "#0000aa", "#aa00aa", "#00aaaa", "#aaaaaa",
+  "#555555", "#ff5555", "#55ff55", "#ffff55",
+  "#5555ff", "#ff55ff", "#55ffff", "#ffffff",
+}
+local function sgr256_to_hex(idx)
+  if idx < 0 or idx > 255 then return nil end
+  if idx < 16 then
+    return SGR_BASIC[idx + 1]
+  elseif idx < 232 then
+    local rgb = idx - 16
+    local r, g, b = math.floor(rgb / 36), math.floor((rgb % 36) / 6), rgb % 6
+    local function comp(n) return n == 0 and 0 or 55 + n * 40 end
+    return string.format("#%02x%02x%02x", comp(r), comp(g), comp(b))
+  else
+    local v = 8 + (idx - 232) * 10
+    return string.format("#%02x%02x%02x", v, v, v)
+  end
+end
+
+-- Scan `s` for the first foreground-setting SGR sequence and return its
+-- hex equivalent, or nil if none.
+local function first_sgr_colour(s)
+  for params in s:gmatch("\27%[([0-9;]*)m") do
+    local n256 = params:match("^38;5;(%d+)$")
+    if n256 then return sgr256_to_hex(tonumber(n256)) end
+    local r, g, b = params:match("^38;2;(%d+);(%d+);(%d+)$")
+    if r then
+      return string.format("#%02x%02x%02x", tonumber(r), tonumber(g), tonumber(b))
+    end
+    local n = tonumber(params)
+    if n then
+      if n >= 30 and n <= 37 then return sgr256_to_hex(n - 30)
+      elseif n >= 90 and n <= 97 then return sgr256_to_hex(n - 90 + 8) end
+    end
+  end
+  return nil
+end
+
 -- Walk a normalised, MXP-tagged payload as a comma-separated stream of
 -- segments, producing a list of room records.
 --
@@ -205,16 +248,19 @@ function M.parse(input)
             label = name_part
           end
 
-          -- Strip any embedded ANSI SGR sequences from the label.
-          -- Discworld emits per-user auto-colouring as raw SGR (e.g.
-          -- "\27[38;5;157mNAME\27[39;49m\27[0m") inside MXP wrappers.
-          -- The user's match list rules entity colour, not server SGR.
+          -- Extract the first foreground SGR colour as a baseline, then
+          -- strip ALL SGR sequences from the label. Discworld emits
+          -- per-user auto-colouring as SGR inside the writtenmap; we keep
+          -- the colour so the panel can show it, while letting MXP and
+          -- the user's match list override.
+          local sgr_colour = first_sgr_colour(label)
           label = (label:gsub("\27%[[0-9;]*m", ""))
 
           entities[#entities + 1] = {
             raw = segment,
             label = label,
             mxp_colour = mxp_colour,
+            sgr_colour = sgr_colour,
             count = count,
           }
         end

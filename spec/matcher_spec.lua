@@ -63,6 +63,24 @@ describe("matcher.score_entity", function()
     )
     assert.equals("yellow", result.colour)
   end)
+
+  it("falls back to SGR colour when MXP colour is absent", function()
+    local result = matcher.score_entity(
+      { label = "kiki", count = 1, mxp_colour = nil, sgr_colour = "#afffaf" },
+      {},
+      1
+    )
+    assert.equals("#afffaf", result.colour)
+  end)
+
+  it("prefers MXP colour over SGR colour", function()
+    local result = matcher.score_entity(
+      { label = "kiki", count = 1, mxp_colour = "#ff0000", sgr_colour = "#afffaf" },
+      {},
+      1
+    )
+    assert.equals("#ff0000", result.colour)
+  end)
 end)
 
 describe("matcher.score_room", function()
