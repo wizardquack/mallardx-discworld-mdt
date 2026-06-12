@@ -23,7 +23,7 @@ local function info(msg)
 end
 
 local function err(msg)
-  mud.note("[mdt] " .. msg, { colour = "red" })
+  mud.note("[mdt] " .. msg, { fg = "red" })
 end
 
 local function usage()

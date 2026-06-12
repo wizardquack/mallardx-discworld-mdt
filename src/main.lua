@@ -14,9 +14,9 @@ local panel = mud.panel("mdt")
 -- Settings accessor — falls back to defaults if Mallard hasn't loaded
 -- settings yet (e.g. during early init).
 local function setting(name, default)
-  local raw = mud.settings and mud.settings[name]
-  if raw == nil then return default end
-  return raw
+  local v = settings.get(name)
+  if v == nil then return default end
+  return v
 end
 
 local function refresh(payload)
@@ -51,7 +51,7 @@ end
 -- the payload is an object → decoded to a Lua table.
 gmcp.on("room.writtenmap", function(_pkg, payload)
   if type(payload) ~= "string" then
-    mud.note("[mdt] unexpected room.writtenmap payload shape", { colour = "yellow" })
+    mud.note("[mdt] unexpected room.writtenmap payload shape", { fg = "yellow" })
     return
   end
   refresh(payload)
