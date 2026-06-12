@@ -3,13 +3,7 @@
   --bg: #1a1a1a;
   --fg: #ddd;
 }
-html, body {
-  margin: 0; padding: 0; height: 100%;
-  /* Match Mallard's OutputPane (src/components/OutputPane.vue:596) so the
-     panel and inline notes render with the same font + size. */
-  font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 13px;
-}
+html, body { margin: 0; padding: 0; height: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
 body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
 
 #rooms { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 8px; }
