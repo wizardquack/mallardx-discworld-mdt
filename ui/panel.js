@@ -7,6 +7,17 @@ function colourClass(colour) {
   return "c-" + colour;
 }
 
+// Tighten "1 nw, 2 w" → "nw, 2w" — elide the "1" entirely, drop the space
+// when count > 1. Keeps the panel's first column compact at narrow widths.
+function formatDirection(s) {
+  return s.split(", ").map((tok) => {
+    const m = tok.match(/^(\d+) (\S+)$/);
+    if (!m) return tok;
+    const [, n, d] = m;
+    return n === "1" ? d : n + d;
+  }).join(", ");
+}
+
 function render(rooms) {
   roomsEl.innerHTML = "";
   if (!rooms || rooms.length === 0) {
@@ -17,7 +28,7 @@ function render(rooms) {
   for (const room of rooms) {
     const dir = document.createElement("div");
     dir.className = "dir";
-    dir.textContent = room.direction;
+    dir.textContent = formatDirection(room.direction);
     roomsEl.appendChild(dir);
 
     const score = document.createElement("div");
