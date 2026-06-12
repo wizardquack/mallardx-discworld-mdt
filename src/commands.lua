@@ -126,10 +126,11 @@ local function cmd_clear()
   info("match list cleared.")
 end
 
-local function dispatch(_match, line)
-  -- `line` is the full input. Strip "mdt" + whitespace, then peel
-  -- subcommand.
-  local rest = line:gsub("^mdt%s*", "")
+local function dispatch(m)
+  -- `m` is a LuaMatch userdata. m[1] is the (.*) capture group from our
+  -- "^mdt(.*)$" alias pattern — i.e. the rest of the line after "mdt".
+  -- Trim leading whitespace to handle both "mdt" and "mdt foo".
+  local rest = (m[1] or ""):gsub("^%s+", "")
   if rest == "" then
     -- Bare `mdt` — open panel (handled in main.lua via `on_panel_open` hook).
     if M.on_focus then M.on_focus() end
@@ -151,7 +152,7 @@ end
 function M.register(on_focus_cb)
   M.on_focus = on_focus_cb
   -- Glob pattern: "mdt" optionally followed by anything. Captures whole line.
-  mud.alias("^mdt(.*)$", dispatch, { regex = true })
+  mud.alias("^mdt(.*)$", dispatch)
 end
 
 return M
