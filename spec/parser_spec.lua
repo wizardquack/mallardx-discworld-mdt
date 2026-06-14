@@ -83,6 +83,13 @@ describe("parser.is_direction", function()
     assert.is_false(parser.is_direction("watchman"))
     assert.is_false(parser.is_direction(""))
   end)
+
+  it("recognises nautical singles", function()
+    assert.is_true(parser.is_direction("fore"))
+    assert.is_true(parser.is_direction("aft"))
+    assert.is_true(parser.is_direction("port"))
+    assert.is_true(parser.is_direction("starboard"))
+  end)
 end)
 
 describe("parser.parse", function()
@@ -195,6 +202,122 @@ describe("parser.parse", function()
     assert.equals(2, #rooms[1].entities)
     assert.equals("captain", rooms[1].entities[2].label)
     assert.equals("#00ff00", rooms[1].entities[2].mxp_colour)
+  end)
+
+  it("parses a nautical compound direction as one short token", function()
+    -- "minister coral is one port fore, the limit of your vision is one
+    -- port fore from here." — entity at compound direction "pf".
+    local input = "alice is one port fore, the limit of your vision is one port fore from here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals("1 pf", rooms[1].direction)
+    assert.equals("alice", rooms[1].entities[1].label)
+  end)
+
+  it("silently consumes split exit lists (boats: 'exits X and Y of one Z')", function()
+    -- " and " → ", " splits multi-direction exit lists into separate
+    -- segments. The continuation must stay in ignoring_exits, not leak
+    -- out as an entity. Real boat shape:
+    --   "exits aft and fore of one starboard, a watchman is one starboard,
+    --    the limit of your vision is one starboard from here."
+    local input = "exits aft and fore of one starboard, a watchman is one starboard, the limit of your vision is one starboard from here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals("1 sb", rooms[1].direction)
+    assert.equals(1, #rooms[1].entities)
+    assert.equals("watchman", rooms[1].entities[1].label)
+  end)
+
+  it("silently consumes exit-list continuations that start with a direction", function()
+    -- "exits starboard fore, port fore, starboard and port of one aft" —
+    -- the trailing "port of one aft" begins with a direction but is part
+    -- of the exit description, not a room of its own.
+    local input = "exits starboard fore, port fore, starboard and port of one aft, a dun horse is one aft and the limit of your vision is one aft from here."
+    local rooms = parser.parse(input)
+    assert.equals(1, #rooms)
+    assert.equals("1 a", rooms[1].direction)
+    assert.equals(1, #rooms[1].entities)
+    assert.equals("dun horse", rooms[1].entities[1].label)
+  end)
+
+  it("treats sentinels with a direction qualifier as flush markers", function()
+    -- Boat sentinels are "the limit of your vision is one <dir> from here",
+    -- one per visible direction. Each one flushes the current room.
+    local input = "alice is one fore, the limit of your vision is one fore from here, bob is one aft and the limit of your vision is one aft from here."
+    local rooms = parser.parse(input)
+    assert.equals(2, #rooms)
+    assert.equals("1 f", rooms[1].direction)
+    assert.equals("alice", rooms[1].entities[1].label)
+    assert.equals("1 a", rooms[2].direction)
+    assert.equals("bob", rooms[2].entities[1].label)
+  end)
+
+  it("parses the on-deck boat fixture into 2 rooms with no door leakage", function()
+    local rooms = parser.parse(load_fixture("writtenmap_boat_deck.txt"))
+    -- Expect: 1 sb → {moon dragon, minister coral, deckhand ravn}; 1 a → {dun horse}.
+    -- The "one starboard aft" / "one port aft" / "one port" sentinels at
+    -- empty directions must NOT produce rooms. The multi-direction exit
+    -- lists must NOT produce entities like "port fore" or "port of one aft".
+    assert.equals(2, #rooms)
+    assert.equals("1 sb", rooms[1].direction)
+    assert.equals(3, #rooms[1].entities)
+    assert.equals("lemon cream moon dragon", rooms[1].entities[1].label)
+    assert.equals("minister coral", rooms[1].entities[2].label)
+    assert.equals("deckhand ravn", rooms[1].entities[3].label)
+    assert.equals("1 a", rooms[2].direction)
+    assert.equals(1, #rooms[2].entities)
+    assert.equals("dun horse", rooms[2].entities[1].label)
+  end)
+
+  it("ignores the orphan tail of a multi-direction boat sentinel", function()
+    -- "the limit of your vision is one aft and one port aft from here"
+    -- becomes "...: one aft, one port aft from here" after " and " → ", ".
+    -- The head ("...vision: one aft") flushes via the prefix branch; the
+    -- tail ("one port aft from here") used to leak as an entity. It must
+    -- be caught and treated as a flush marker too.
+    local input = "alice is one fore, the limit of your vision is one aft and one port aft from here."
+    local rooms = parser.parse(input)
+    -- alice@1 f flushes via direction→entity rule? Actually alice is
+    -- followed by the sentinel directly; we only get a room for alice if
+    -- the trailing flush picks it up. The sentinel flushes alice@1 f.
+    assert.equals(1, #rooms)
+    assert.equals("1 f", rooms[1].direction)
+    assert.equals("alice", rooms[1].entities[1].label)
+    -- Crucially: no phantom "port aft from here" entity in any room.
+    for _, room in ipairs(rooms) do
+      for _, e in ipairs(room.entities) do
+        assert.is_nil(e.label:match("from here"))
+      end
+    end
+  end)
+
+  it("parses the multi-sentinel boat fixture with kiki at one port fore", function()
+    local rooms = parser.parse(load_fixture("writtenmap_boat_multi_sentinel.txt"))
+    -- Expect: 1 a → {deckhand ravn}; 1 pf → {dun horse, suitcase ..., terrible kiki totally}.
+    -- The multi-direction sentinels and split exit lists must NOT produce
+    -- phantom "X from here" / "X of one Y" entities, and no extra rooms.
+    assert.equals(2, #rooms)
+    assert.equals("1 a", rooms[1].direction)
+    assert.equals(1, #rooms[1].entities)
+    assert.equals("deckhand ravn", rooms[1].entities[1].label)
+    assert.equals("1 pf", rooms[2].direction)
+    assert.equals(3, #rooms[2].entities)
+    assert.equals("dun horse", rooms[2].entities[1].label)
+    assert.equals("suitcase the giant fruitbat", rooms[2].entities[2].label)
+    assert.equals("terrible kiki totally", rooms[2].entities[3].label)
+  end)
+
+  it("parses the belowdecks boat fixture into 2 rooms with compound dir", function()
+    local rooms = parser.parse(load_fixture("writtenmap_boat_below.txt"))
+    -- Expect: 1 pf → {minister coral}; 2 a → {bitey, nugget}.
+    assert.equals(2, #rooms)
+    assert.equals("1 pf", rooms[1].direction)
+    assert.equals(1, #rooms[1].entities)
+    assert.equals("minister coral", rooms[1].entities[1].label)
+    assert.equals("2 a", rooms[2].direction)
+    assert.equals(2, #rooms[2].entities)
+    assert.equals("bitey the sky blue swamp dragon", rooms[2].entities[1].label)
+    assert.equals("nugget the dark purple swamp dragon", rooms[2].entities[2].label)
   end)
 
   it("flushes on the vision sentinel", function()

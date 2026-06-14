@@ -23,6 +23,24 @@ local DIRECTIONS = {
   north = true, south = true, east = true, west = true,
   northeast = true, northwest = true, southeast = true, southwest = true,
   up = true, down = true,
+  -- Nautical (boats use these instead of n/s/e/w). Discworld emits both
+  -- standalones and two-word compounds — compounds are matched separately
+  -- via NAUTICAL_COMPOUNDS below.
+  fore = true, aft = true, port = true, starboard = true,
+}
+
+-- Two-word nautical compounds. Discworld's writtenmap puts port/starboard
+-- first ("port fore", "starboard aft"); tt_dw and other clients use the
+-- reverse ordering too, so we accept both.
+local NAUTICAL_COMPOUNDS = {
+  ["port fore"]      = "pf",
+  ["port aft"]       = "pa",
+  ["starboard fore"] = "sbf",
+  ["starboard aft"]  = "sba",
+  ["fore port"]      = "pf",
+  ["fore starboard"] = "sbf",
+  ["aft port"]       = "pa",
+  ["aft starboard"]  = "sba",
 }
 
 -- Lowercase, collapse conjunctions, mark vision sentinel. Order matters:
@@ -87,7 +105,10 @@ local function is_door_segment(rest)
   return false
 end
 
--- Short forms of every direction word the walker may encounter.
+-- Short forms of every direction word the walker may encounter. Nautical
+-- shorts: f/a/p for fore/aft/port; "sb" (not "s") for starboard to avoid
+-- clashing with south — they never co-occur in practice, but the disambig
+-- keeps the panel display unambiguous.
 local SHORT_DIRECTION = {
   n = "n", s = "s", e = "e", w = "w",
   ne = "ne", nw = "nw", se = "se", sw = "sw",
@@ -95,6 +116,7 @@ local SHORT_DIRECTION = {
   north = "n", south = "s", east = "e", west = "w",
   northeast = "ne", northwest = "nw", southeast = "se", southwest = "sw",
   up = "u", down = "d",
+  fore = "f", aft = "a", port = "p", starboard = "sb",
 }
 
 function M.short_direction(d) return SHORT_DIRECTION[d] or d end
@@ -213,6 +235,14 @@ function M.parse(input)
       -- skip
     elseif segment:match("^the limit of your vision:") then
       flush_room()
+    elseif segment:match("from here%.?$") then
+      -- Sentinel-tail continuation. A multi-direction boat sentinel like
+      -- "the limit of your vision is one aft and one port aft from here"
+      -- splits under " and " → ", " into a head ("the limit of your
+      -- vision: one aft") and an orphan tail ("one port aft from here").
+      -- The head flushes via the prefix branch above; the tail is caught
+      -- here so it doesn't leak as a phantom entity.
+      flush_room()
     else
       local count, rest = M.parse_count(segment)
 
@@ -222,17 +252,38 @@ function M.parse(input)
         -- follows so it doesn't become a "room" of its own.
         ignoring_exits = true
       else
-        local first_word = rest:match("^([%a]+)")
-        if first_word and M.is_direction(first_word) then
-          if ignoring_exits then
-            -- Silently consumed.
-          else
-            local short = M.short_direction(first_word)
+        -- Recognise the segment as a pure direction phrase: a single
+        -- direction word, or a nautical two-word compound ("port fore",
+        -- "starboard aft"). The check looks at the whole `rest` rather
+        -- than just first_word so compounds aren't truncated to their
+        -- first half.
+        local short = nil
+        if DIRECTIONS[rest] then
+          short = SHORT_DIRECTION[rest]
+        else
+          local w1, w2 = rest:match("^(%a+) (%a+)$")
+          if w1 and w2 then short = NAUTICAL_COMPOUNDS[w1 .. " " .. w2] end
+        end
+
+        if short then
+          if not ignoring_exits then
             if direction ~= "" then direction = direction .. ", " end
             direction = direction .. count .. " " .. short
             last_was_dir = true
           end
+          -- In ignoring_exits mode the direction is silently consumed.
         else
+          -- Not a pure direction phrase. While in ignoring_exits mode,
+          -- exit-list continuations like "port of one aft" or "fore of
+          -- one starboard" begin with a direction word — keep eating
+          -- them so the trailing "of one X" doesn't leak out as an
+          -- entity. Boats emit multi-direction exit lists ("exits aft
+          -- and fore of one starboard") that split into separate
+          -- segments under " and " → ", " normalisation.
+          local first_word = rest:match("^([%a]+)")
+          if ignoring_exits and first_word and DIRECTIONS[first_word] then
+            -- silently consumed
+          else
           -- Entity. A direction → entity transition means the previous
           -- room is complete; flush it before adding this entity to the
           -- new (empty) room.
@@ -263,6 +314,7 @@ function M.parse(input)
             sgr_colour = sgr_colour,
             count = count,
           }
+          end
         end
       end
     end
