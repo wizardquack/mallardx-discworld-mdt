@@ -28,7 +28,7 @@ end
 
 local function usage()
   info("usage:")
-  info("  mdt                     focus the panel")
+  info("  mdt                     this message")
   info("  mdt help                this message")
   info("  mdt list [pattern]      show match list")
   info("  mdt add <pat> [score] [colour]")
@@ -132,8 +132,7 @@ local function dispatch(m)
   -- Trim leading whitespace to handle both "mdt" and "mdt foo".
   local rest = (m[1] or ""):gsub("^%s+", "")
   if rest == "" then
-    -- Bare `mdt` — open panel (handled in main.lua via `on_panel_open` hook).
-    if M.on_focus then M.on_focus() end
+    usage()
     return
   end
   local sub, sub_args = rest:match("^(%S+)%s*(.*)$")
@@ -149,8 +148,7 @@ local function dispatch(m)
   end
 end
 
-function M.register(on_focus_cb)
-  M.on_focus = on_focus_cb
+function M.register()
   -- Glob pattern: "mdt" optionally followed by anything. Captures whole line.
   mud.alias("^mdt(.*)$", dispatch)
 end

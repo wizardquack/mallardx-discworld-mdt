@@ -46,6 +46,4 @@ end)
 
 inline.register(push_panel)
 
-commands.register(function()
-  if panel.open then panel:open() end
-end)
+commands.register()

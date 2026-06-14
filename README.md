@@ -19,8 +19,8 @@ Rooms are sorted by score; the panel hides rooms below a threshold (configurable
 
 | Command | Effect |
 |---|---|
-| `mdt` | Focus the Nearby panel |
-| `mdt help` | Command list |
+| `mdt` | Show command list |
+| `mdt help` | Show command list |
 | `mdt list [pattern]` | Show match list, optionally filtered |
 | `mdt add <pattern> [score] [colour]` | Add a match |
 | `mdt remove <pattern>\|<n>` | Remove by pattern text or 1-based index |
