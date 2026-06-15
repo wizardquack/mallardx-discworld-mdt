@@ -16,6 +16,12 @@ local inline   = require("inline")
 
 local panel = mud.panel("mdt")
 
+-- Opt out of the restart-on-settings-change default. All three of our
+-- settings (default_score, min_score, max_rooms) are read inline at the
+-- top of pipeline.score_payload(), so the next scored payload picks up
+-- the new values automatically — no restart needed.
+settings.on("change", function() end)
+
 -- Flatten the pipeline's scored output to the panel's shape and push it.
 -- Both the GMCP room.writtenmap path and the inline map-door-text trigger
 -- call this so the panel stays in sync with whichever payload arrived
