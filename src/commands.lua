@@ -150,7 +150,10 @@ end
 function M.register()
   -- Client command: invoke as `/mdt` (default prefix) or whatever the
   -- user's `command_prefix` setting is. Subcommands are passed via m.args.
-  mud.command("mdt", dispatch)
+  mud.command("mdt", dispatch, {
+    description = "Open the Multiple Discworld Things directory and search.",
+    usage = "mdt [query]",
+  })
 end
 
 return M

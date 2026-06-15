@@ -1,6 +1,6 @@
 id = "net.mallard.discworld-mdt"
 name = "Discworld MDT"
-version = "0.1.0"
+version = "0.1.1"
 description = "Map Door Text — parses Discworld's room.writtenmap GMCP frames into a scored panel of nearby-room contents."
 language = "lua"
 entry = "src/main.lua"
