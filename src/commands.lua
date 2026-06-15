@@ -127,10 +127,9 @@ local function cmd_clear()
 end
 
 local function dispatch(m)
-  -- `m` is a LuaMatch userdata. m[1] is the (.*) capture group from our
-  -- "^mdt(.*)$" alias pattern — i.e. the rest of the line after "mdt".
-  -- Trim leading whitespace to handle both "mdt" and "mdt foo".
-  local rest = (m[1] or ""):gsub("^%s+", "")
+  -- `m` is a LuaMatch userdata. m.args is the rest-of-line after the
+  -- command name, already trimmed by the host.
+  local rest = m.args
   if rest == "" then
     usage()
     return
@@ -149,8 +148,9 @@ local function dispatch(m)
 end
 
 function M.register()
-  -- Glob pattern: "mdt" optionally followed by anything. Captures whole line.
-  mud.alias("^mdt(.*)$", dispatch)
+  -- Client command: invoke as `/mdt` (default prefix) or whatever the
+  -- user's `command_prefix` setting is. Subcommands are passed via m.args.
+  mud.command("mdt", dispatch)
 end
 
 return M
