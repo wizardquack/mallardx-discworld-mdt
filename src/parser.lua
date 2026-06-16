@@ -164,6 +164,93 @@ local function first_sgr_colour(s)
   return nil
 end
 
+-- Detect a "terrain" writtenmap (outside-of-city map view: ASCII art with
+-- `.` plains, `#` road, `c` cabbages, `@` player, etc). Discworld emits
+-- these via the same room.writtenmap GMCP frame as the entity-list
+-- variant, but the shape is completely different — a multi-line grid with
+-- per-character SGR colouring. The entity-list parser would happily glom
+-- the whole thing into one "entity", so callers branch on this before
+-- calling parse().
+--
+-- Heuristic: entity-list payloads are always a single line. Terrain
+-- payloads always contain at least one newline and lack the vision
+-- sentinel. Both checks together make false positives effectively
+-- impossible.
+function M.is_terrain(input)
+  if type(input) ~= "string" or input == "" then return false end
+  if not input:find("\n", 1, true) then return false end
+  if input:lower():find("the limit of your vision", 1, true) then
+    return false
+  end
+  return true
+end
+
+-- Decode the foreground colour for SGR state {fg, bold}. `fg` is 0-15 in
+-- ANSI 16-colour space, or nil for default. Bold promotes the standard
+-- 8 (0-7) into the bright 8 (8-15) — this is the de-facto behaviour of
+-- most modern terminals, and matches what Discworld assumes when it
+-- emits `\27[1;33m` (bold yellow) for the player marker.
+local function sgr_state_to_hex(fg, bold)
+  if fg == nil then return nil end
+  if bold and fg < 8 then fg = fg + 8 end
+  return SGR_BASIC[fg + 1]
+end
+
+-- Parse a terrain payload into a list of rows, each a list of cell
+-- records {char, fg, bold}. `fg` is a hex colour string or nil for
+-- default. Strips all SGR sequences; preserves leading/trailing spaces
+-- (Discworld pads the diamond-shaped terrain map with spaces so it
+-- renders aligned).
+function M.parse_terrain(input)
+  local rows = {{}}
+  local fg = nil
+  local bold = false
+
+  local i = 1
+  while i <= #input do
+    local byte = input:byte(i)
+    if byte == 27 then
+      -- SGR: \27[<params>m. Anything else (unlikely in writtenmap) is
+      -- skipped one byte at a time.
+      local params, after = input:match("^%[([0-9;]*)m()", i + 1)
+      if params then
+        for code in (params .. ";"):gmatch("([^;]*);") do
+          if code == "" or code == "0" then
+            fg = nil; bold = false
+          else
+            local n = tonumber(code)
+            if n == 1 then bold = true
+            elseif n == 22 then bold = false
+            elseif n == 39 then fg = nil
+            elseif n and n >= 30 and n <= 37 then fg = n - 30
+            elseif n and n >= 90 and n <= 97 then fg = n - 90 + 8
+            end
+          end
+        end
+        i = after
+      else
+        i = i + 1
+      end
+    elseif byte == 10 then  -- \n
+      if #rows[#rows] > 0 then rows[#rows + 1] = {} end
+      i = i + 1
+    elseif byte == 13 then  -- \r — defensive; payloads observed don't have it
+      i = i + 1
+    else
+      rows[#rows][#rows[#rows] + 1] = {
+        char = string.char(byte),
+        fg = sgr_state_to_hex(fg, bold),
+        bold = bold and fg ~= nil,
+      }
+      i = i + 1
+    end
+  end
+
+  -- Drop trailing empty row (terrain payloads end with \n).
+  if #rows > 0 and #rows[#rows] == 0 then rows[#rows] = nil end
+  return rows
+end
+
 -- Walk a normalised, MXP-tagged payload as a comma-separated stream of
 -- segments, producing a list of room records.
 --

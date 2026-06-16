@@ -329,3 +329,55 @@ describe("parser.parse", function()
     assert.equals("1 s", rooms[2].direction)
   end)
 end)
+
+describe("parser.is_terrain", function()
+  it("returns false for the entity-list shape (no newline)", function()
+    assert.is_false(parser.is_terrain(load_fixture("writtenmap_basic.txt")))
+  end)
+
+  it("returns true for multi-line payloads without the sentinel", function()
+    assert.is_true(parser.is_terrain(load_fixture("writtenmap_terrain.txt")))
+  end)
+
+  it("returns false for nil / empty", function()
+    assert.is_false(parser.is_terrain(nil))
+    assert.is_false(parser.is_terrain(""))
+  end)
+end)
+
+describe("parser.parse_terrain", function()
+  it("parses the terrain fixture into a grid of cells", function()
+    local rows = parser.parse_terrain(load_fixture("writtenmap_terrain.txt"))
+    assert.equals(9, #rows)
+    for _, row in ipairs(rows) do
+      assert.equals(9, #row)
+    end
+  end)
+
+  it("preserves character content per cell", function()
+    local rows = parser.parse_terrain(load_fixture("writtenmap_terrain.txt"))
+    -- Row 1 is all plains.
+    for _, cell in ipairs(rows[1]) do assert.equals(".", cell.char) end
+    -- Row 5 is the player row: ####@#...
+    local row5 = rows[5]
+    assert.equals("#", row5[1].char)
+    assert.equals("#", row5[4].char)
+    assert.equals("@", row5[5].char)
+    assert.equals("#", row5[6].char)
+    assert.equals(".", row5[7].char)
+  end)
+
+  it("tags road cells red and the player bold yellow", function()
+    local rows = parser.parse_terrain(load_fixture("writtenmap_terrain.txt"))
+    local row5 = rows[5]
+    -- Road glyphs around the player carry SGR 31 → red.
+    assert.equals("#aa0000", row5[1].fg)
+    assert.is_false(row5[1].bold)
+    -- Player carries SGR 1;33 → bold yellow → bright yellow.
+    assert.equals("@", row5[5].char)
+    assert.equals("#ffff55", row5[5].fg)
+    assert.is_true(row5[5].bold)
+    -- Plains carry no colour.
+    assert.is_nil(rows[1][1].fg)
+  end)
+end)

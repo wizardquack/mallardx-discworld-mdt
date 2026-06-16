@@ -11,6 +11,7 @@
 -- implementation.
 
 local pipeline = require("pipeline")
+local parser   = require("parser")
 local commands = require("commands")
 local inline   = require("inline")
 
@@ -43,6 +44,14 @@ end
 gmcp.on("room.writtenmap", function(_pkg, payload)
   if type(payload) ~= "string" then
     mud.note("[mdt] unexpected room.writtenmap payload shape", { fg = "yellow" })
+    return
+  end
+  -- Discworld sends a terrain ASCII-art map via the same frame when the
+  -- player is outside any city — completely different shape from the
+  -- entity-list variant. Route it to its own panel view instead of
+  -- feeding the entity parser garbage.
+  if parser.is_terrain(payload) then
+    panel:post("terrain", { rows = parser.parse_terrain(payload) })
     return
   end
   push_panel(pipeline.score_payload(payload))

@@ -1,0 +1,9 @@
+.........ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m
+......ESC[31m###ESC[39;49mESC[0m
+ESC[31m####ESC[1;33m@ESC[39;49mESC[0mESC[31m#ESC[39;49mESC[0m...ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m
+.........ESC[39;49mESC[0m

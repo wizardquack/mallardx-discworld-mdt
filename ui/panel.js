@@ -1,5 +1,7 @@
 const roomsEl = document.getElementById("rooms");
 const emptyEl = document.getElementById("empty");
+const terrainWrapEl = document.getElementById("terrain-wrap");
+const terrainEl = document.getElementById("terrain");
 
 function colourClass(colour) {
   if (!colour) return "";
@@ -20,6 +22,7 @@ function formatDirection(s) {
 
 function render(rooms) {
   roomsEl.innerHTML = "";
+  terrainWrapEl.hidden = true;
   if (!rooms || rooms.length === 0) {
     emptyEl.hidden = false;
     return;
@@ -57,10 +60,37 @@ function render(rooms) {
   }
 }
 
+function renderTerrain(rows) {
+  roomsEl.innerHTML = "";
+  emptyEl.hidden = true;
+  terrainEl.innerHTML = "";
+  if (!rows || rows.length === 0) {
+    terrainWrapEl.hidden = true;
+    emptyEl.hidden = false;
+    return;
+  }
+  for (let r = 0; r < rows.length; r++) {
+    for (const cell of rows[r]) {
+      if (cell.fg) {
+        const span = document.createElement("span");
+        span.style.color = cell.fg;
+        if (cell.bold) span.style.fontWeight = "bold";
+        span.textContent = cell.char;
+        terrainEl.appendChild(span);
+      } else {
+        terrainEl.appendChild(document.createTextNode(cell.char));
+      }
+    }
+    if (r < rows.length - 1) terrainEl.appendChild(document.createTextNode("\n"));
+  }
+  terrainWrapEl.hidden = false;
+}
+
 window.addEventListener("message", (ev) => {
   const m = ev.data;
-  if (!m || m.name !== "rooms") return;
-  render(m.data.rooms || []);
+  if (!m) return;
+  if (m.name === "rooms") render(m.data.rooms || []);
+  else if (m.name === "terrain") renderTerrain(m.data.rows || []);
 });
 
 // Signal readiness so Lua can push the initial snapshot.
