@@ -99,9 +99,10 @@ end
 function M.register(on_scored)
   local st = accumulator.new()
   world.on("line", function(line)
-    -- Only the raw server stream carries map-door-text; skip our own notes
-    -- and local echoes so re-emitted rows can't feed back into the buffer.
-    if line.source ~= nil and line.source ~= "" then return end
+    -- Only the raw server stream carries map-door-text. line.source is
+    -- "server" | "echo" | "plugin_note" | "system"; skip everything but
+    -- "server" so our own re-emitted notes can't feed back into the buffer.
+    if line.source ~= "server" then return end
     local gag, payload = accumulator.feed(st, line.text)
     if payload then render(payload, on_scored) end
     if gag then return true end
