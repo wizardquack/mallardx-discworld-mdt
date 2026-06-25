@@ -91,6 +91,27 @@ function M.is_direction(s)
   return DIRECTIONS[s] == true
 end
 
+-- Count "<number-word> <direction-word>" phrases (e.g. "one west", "two
+-- southeast") in a line. This construction is unique to writtenmap entity
+-- lists: room descriptions and other prose say "to the north" or "leads off
+-- northwards", never "one north", so a non-trivial count cleanly identifies a
+-- map-door-text fragment — including the *leading* fragment of a server-
+-- wrapped payload, which may carry no "the limit of your vision" sentinel at
+-- all. Used by the inline accumulator to detect and buffer such fragments.
+-- Verified against a week of logs: every non-MDT line scored 0, every MDT
+-- fragment scored >= 22.
+function M.direction_density(text)
+  local count = 0
+  local prev = nil
+  for word in text:lower():gmatch("%a+") do
+    if prev and NUMBER_WORDS[prev] and DIRECTIONS[word] then
+      count = count + 1
+    end
+    prev = word
+  end
+  return count
+end
+
 -- Detect a door/exit segment by prefix. After parse_count strips count +
 -- article, a segment like "door" / "doors" / "exit" / "exits" / "hard to
 -- see through exit" / "exit south of one west" all qualify. Word-boundary

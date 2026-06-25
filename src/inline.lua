@@ -1,8 +1,15 @@
--- Inline map-door-text trigger. Catches the textual sentinel line that
--- Discworld emits when `map door text` is invoked, gags the raw output,
--- and re-emits a styled, scored version via mud.note + mud.span.
+-- Inline map-door-text handler. Catches the textual output Discworld emits
+-- when `map door text` is invoked, gags the raw lines, and re-emits a styled,
+-- scored version via mud.note + mud.span.
+--
+-- Discworld word-wraps that output at ~1000 bytes, so a dense payload arrives
+-- as several consecutive physical lines. We therefore observe the raw stream
+-- via world.on("line") and feed it through the accumulator, which reassembles
+-- the wrapped fragments before scoring — a single-line trigger would only ever
+-- see the final fragment.
 
-local pipeline = require("pipeline")
+local pipeline    = require("pipeline")
+local accumulator = require("accumulator")
 
 local M = {}
 
@@ -67,30 +74,37 @@ local function emit_row(dir_str, dir_width, room)
   mud.note(table.unpack(spans))
 end
 
+-- Score a reassembled payload and emit one styled inline note per room.
+local function render(payload, on_scored)
+  local scored = pipeline.score_payload(payload)
+  if on_scored then on_scored(scored) end
+  -- Pre-compute formatted directions so we can align the score column
+  -- to the widest direction across this batch of rooms.
+  local rows = {}
+  local max_dir_width = 0
+  for _, room in ipairs(scored) do
+    local dir = format_direction(room.direction)
+    if #dir > max_dir_width then max_dir_width = #dir end
+    rows[#rows + 1] = { dir = dir, room = room }
+  end
+  for _, r in ipairs(rows) do
+    emit_row(r.dir, max_dir_width, r.room)
+  end
+end
+
 -- `on_scored` is an optional callback invoked with the scored room list
 -- (same shape pipeline.score_payload returns). main.lua passes its
 -- panel-push so the manual `map door text` command refreshes the panel
 -- alongside emitting inline notes.
 function M.register(on_scored)
-  -- Mallard trigger patterns are Rust regex (not Lua patterns). The `.*`
-  -- between "is " and "here." (not `.+`) lets the empty-rooms case match:
-  -- "the limit of your vision is here." with no preceding entities.
-  mud.trigger("the limit of your vision is .*here\\.$", function(m)
-    m:gag()
-    local scored = pipeline.score_payload(m.text)
-    if on_scored then on_scored(scored) end
-    -- Pre-compute formatted directions so we can align the score column
-    -- to the widest direction across this batch of rooms.
-    local rows = {}
-    local max_dir_width = 0
-    for _, room in ipairs(scored) do
-      local dir = format_direction(room.direction)
-      if #dir > max_dir_width then max_dir_width = #dir end
-      rows[#rows + 1] = { dir = dir, room = room }
-    end
-    for _, r in ipairs(rows) do
-      emit_row(r.dir, max_dir_width, r.room)
-    end
+  local st = accumulator.new()
+  world.on("line", function(line)
+    -- Only the raw server stream carries map-door-text; skip our own notes
+    -- and local echoes so re-emitted rows can't feed back into the buffer.
+    if line.source ~= nil and line.source ~= "" then return end
+    local gag, payload = accumulator.feed(st, line.text)
+    if payload then render(payload, on_scored) end
+    if gag then return true end
   end)
 end
 

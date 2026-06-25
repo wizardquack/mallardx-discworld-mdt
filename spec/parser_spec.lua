@@ -381,3 +381,30 @@ describe("parser.parse_terrain", function()
     assert.is_nil(rows[1][1].fg)
   end)
 end)
+
+describe("parser.direction_density", function()
+  it("counts '<count> <direction>' phrases", function()
+    assert.equals(2, parser.direction_density(
+      "a goat is one west, a cat is two southeast"))
+  end)
+
+  it("counts each direction in a multi-distance phrase", function()
+    assert.equals(2, parser.direction_density(
+      "a tortoise is one west and one southwest"))
+  end)
+
+  it("scores room-description prose at zero", function()
+    -- Prose says "to the north" / "leads off northwards", never "one north".
+    assert.equals(0, parser.direction_density(
+      "Steps climb up the north and south sides of the square, " ..
+      "and the road leads off northwards and southwest."))
+  end)
+
+  it("scores an empty string at zero", function()
+    assert.equals(0, parser.direction_density(""))
+  end)
+
+  it("is case-insensitive", function()
+    assert.equals(1, parser.direction_density("A Goat Is One West"))
+  end)
+end)
