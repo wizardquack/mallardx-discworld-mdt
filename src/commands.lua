@@ -126,6 +126,11 @@ local function cmd_clear()
   info("match list cleared.")
 end
 
+-- Set by M.register. Invoked after any subcommand that mutates the match
+-- list so main.lua can re-score the current room (the panel is keyed off a
+-- cached payload that the match list now scores differently).
+local on_change = nil
+
 local function dispatch(m)
   -- `m` is a LuaMatch userdata. m.args is the rest-of-line after the
   -- command name, already trimmed by the host.
@@ -138,16 +143,20 @@ local function dispatch(m)
   sub_args = sub_args or ""
   if sub == "help" then usage()
   elseif sub == "list" then cmd_list(sub_args)
-  elseif sub == "add" then cmd_add(sub_args)
-  elseif sub == "remove" or sub == "rm" then cmd_remove(sub_args)
-  elseif sub == "clear" then cmd_clear()
+  elseif sub == "add" then cmd_add(sub_args); if on_change then on_change() end
+  elseif sub == "remove" or sub == "rm" then cmd_remove(sub_args); if on_change then on_change() end
+  elseif sub == "clear" then cmd_clear(); if on_change then on_change() end
   else
     err("unknown subcommand: " .. sub)
     usage()
   end
 end
 
-function M.register()
+-- `on_change_cb` (optional) fires after a mutating subcommand; main.lua
+-- passes its panel-refresh so an `mdt add/remove/clear` updates the Nearby
+-- panel immediately, without waiting for the next room frame.
+function M.register(on_change_cb)
+  on_change = on_change_cb
   -- Client command: invoke as `/mdt` (default prefix) or whatever the
   -- user's `command_prefix` setting is. Subcommands are passed via m.args.
   mud.command("mdt", dispatch, {
