@@ -14,13 +14,16 @@ local pipeline  = require("pipeline")
 local parser    = require("parser")
 local commands  = require("commands")
 local inline    = require("inline")
+local panelgate = require("panelgate")
 
 local panel = mud.panel("mdt")
+local gate = panelgate.new()
 
 -- Flatten the pipeline's scored output to the panel's shape and push it.
 -- Both the GMCP room.writtenmap path and the inline map-door-text trigger
--- call this so the panel stays in sync with whichever payload arrived
--- most recently.
+-- call this. The gate suppresses a post whose room set matches the last one
+-- shipped, so when both pipelines fire for the same move the panel is still
+-- driven only once (see panelgate.lua).
 local function push_panel(scored)
   local rooms = {}
   for _, s in ipairs(scored) do
@@ -30,6 +33,7 @@ local function push_panel(scored)
       entities = s.entities,
     }
   end
+  if not panelgate.should_post(gate, rooms) then return end
   panel:post("rooms", { rooms = rooms })
 end
 
