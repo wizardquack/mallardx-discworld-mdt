@@ -74,6 +74,13 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
   -- feeding the entity parser garbage.
   if parser.is_terrain(payload) then
     panel:post("terrain", { rows = parser.parse_terrain(payload) })
+    -- Drop the entity dirty-check baseline: the panel is now in map mode, so
+    -- the next entity frame MUST re-post to switch it back to nearby-text mode
+    -- — even when that frame is byte-identical to the last one seen before
+    -- going overboard (climbing back aboard the same deck spot). Without this
+    -- the `payload == last_payload` guard below suppresses it and the panel
+    -- stays stuck rendering the map.
+    last_payload = nil
     return
   end
   -- Unchanged room re-send: nothing to do, and skipping keeps this callback
