@@ -14,13 +14,18 @@ local pipeline  = require("pipeline")
 local parser    = require("parser")
 local commands  = require("commands")
 local inline    = require("inline")
+local panelgate = require("panelgate")
 
 local panel = mud.panel("mdt")
+local gate = panelgate.new()
 
 -- Flatten the pipeline's scored output to the panel's shape and push it.
 -- Both the GMCP room.writtenmap path and the inline map-door-text trigger
--- call this so the panel stays in sync with whichever payload arrived
--- most recently.
+-- call this. The gate suppresses a post whose room set matches the last one
+-- shipped, so when both pipelines fire for the same move the panel is still
+-- driven only once (see panelgate.lua). A terrain frame resets the gate (in
+-- the GMCP handler below) so the next room set always re-posts and switches
+-- the panel back out of map mode.
 local function push_panel(scored)
   local rooms = {}
   for _, s in ipairs(scored) do
@@ -30,6 +35,7 @@ local function push_panel(scored)
       entities = s.entities,
     }
   end
+  if not panelgate.should_post(gate, rooms) then return end
   panel:post("rooms", { rooms = rooms })
 end
 
@@ -74,13 +80,14 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
   -- feeding the entity parser garbage.
   if parser.is_terrain(payload) then
     panel:post("terrain", { rows = parser.parse_terrain(payload) })
-    -- Drop the entity dirty-check baseline: the panel is now in map mode, so
-    -- the next entity frame MUST re-post to switch it back to nearby-text mode
-    -- — even when that frame is byte-identical to the last one seen before
-    -- going overboard (climbing back aboard the same deck spot). Without this
-    -- the `payload == last_payload` guard below suppresses it and the panel
-    -- stays stuck rendering the map.
+    -- The panel is now in map mode, so the next entity frame MUST re-post to
+    -- switch it back to nearby-text mode — even when that frame is identical
+    -- to the last one seen before going overboard (climbing back aboard the
+    -- same deck spot). Both dedup gates would otherwise suppress it and leave
+    -- the panel stuck rendering the map: the raw last_payload check below, and
+    -- the scored-output panelgate in push_panel. Clear both here.
     last_payload = nil
+    panelgate.reset(gate)
     return
   end
   -- Unchanged room re-send: nothing to do, and skipping keeps this callback
