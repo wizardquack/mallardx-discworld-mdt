@@ -16,7 +16,7 @@ gmcp_access = ["room.writtenmap", "char.info", "char.info.*"]
 match = ["discworld.starturtle.net:*"]
 
 [gmcp]
-advertise = ["room.writtenmap", "char.info"]
+advertise = ["room.writtenmap 1", "char.info 1"]
 
 [panels.mdt]
 title              = "Nearby"
