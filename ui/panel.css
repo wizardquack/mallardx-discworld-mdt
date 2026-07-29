@@ -33,7 +33,7 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
 .c-bold-magenta { color: #f5f; font-weight: bold; }
 .c-bold-white   { color: #fff; font-weight: bold; }
 
-#empty { padding: 8px; color: #666; font-style: italic; }
+#empty { color: var(--fg-muted, #777); text-align: center; margin: 24px 0; }
 
 #terrain-wrap {
   display: flex;
