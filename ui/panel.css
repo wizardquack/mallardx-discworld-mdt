@@ -36,27 +36,24 @@
   --radar-hot:  var(--accent);                                   /* "go here" outline, in the theme's accent */
   --radar-chip: color-mix(in srgb, var(--bg) 55%, transparent);
 
-  /* Default heat ramp, dark: a deliberate five-step gradient (cold indigo →
-     hot rust) held to a low lightness, because squares carry pale text and
-     coloured entity names on top. Kept as a designed scale rather than theme
-     ANSI so the bands read as one ordered ramp; a user colour (plugin
-     settings) overrides any band, and the light base gets its own tints. */
-  --radar-heat-1: #16244f;
-  --radar-heat-2: #3a1a5e;
-  --radar-heat-3: #661a52;
-  --radar-heat-4: #8c1f33;
-  --radar-heat-5: #9c3000;
-}
-
-/* Light base: only the heat ramp still needs a hand-tuned set — the same five
-   hues as tints rather than shadows, since the text over them is now dark. The
-   rest of the chrome derives from --bg/--fg above and adapts on its own. */
-:root[data-theme="light"] {
-  --radar-heat-1: #dde5f8;
-  --radar-heat-2: #e4d9f4;
-  --radar-heat-3: #f4d3ea;
-  --radar-heat-4: #fac9cf;
-  --radar-heat-5: #ffd7b0;
+  /* Heat ramp, derived from the theme. Each band takes one hue off the flame
+     progression — cold blue → violet → magenta → red → hot orange — from the
+     ANSI palette and mixes it down into --bg, so it lands as a tint of the
+     panel's own background rather than a fixed colour. That mix is what makes
+     it adapt: a dark theme yields saturated darks, a light one pale tints of
+     the same hues, and a tinted theme (Solarized, Gruvbox) picks up its own
+     ground instead of fighting it — which the old hand-tuned dark/light pair
+     couldn't. Intensity climbs with the band so a crowd reads hotter than a
+     lone figure; violet and orange are blends of two neighbours since ANSI has
+     no slot of its own for them. The text halo (--radar-halo, = --bg) keeps
+     names legible over every step. A colour set in the plugin's settings is
+     applied inline by grid.js and overrides its band. The fallbacks match the
+     bundled dark theme, for when the file is opened outside Mallard. */
+  --radar-heat-1: color-mix(in srgb, var(--ansi-4, #4466cc) 24%, var(--bg));
+  --radar-heat-2: color-mix(in srgb, color-mix(in srgb, var(--ansi-4, #4466cc), var(--ansi-5, #cc00cc)) 30%, var(--bg));
+  --radar-heat-3: color-mix(in srgb, var(--ansi-5, #cc00cc) 36%, var(--bg));
+  --radar-heat-4: color-mix(in srgb, var(--ansi-1, #cc0000) 42%, var(--bg));
+  --radar-heat-5: color-mix(in srgb, color-mix(in srgb, var(--ansi-1, #cc0000), var(--ansi-3, #cccc00)) 48%, var(--bg));
 }
 
 html, body { margin: 0; padding: 0; height: 100%; }
