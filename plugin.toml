@@ -24,6 +24,14 @@ entry              = "ui/panel.html"
 default_dock       = "right"
 default_size       = { width = 280, height = 400 }
 
+# Same rooms, laid out as a compass grid. A separate panel rather than a
+# mode of the one above, so a layout can carry either or both.
+[panels.grid]
+title              = "Radar"
+entry              = "ui/grid.html"
+default_dock       = "right"
+default_size       = { width = 280, height = 320 }
+
 [settings.default_score]
 type = "number"
 default = 1
@@ -39,6 +47,51 @@ min = -500
 max = 500
 label = "Hide rooms scoring below"
 description = "Rooms whose total score is below this threshold are omitted from the panel."
+
+[settings.radar_shading]
+type = "enum"
+default = "gradient"
+choices = [
+  { value = "gradient", label = "Shade by score" },
+  { value = "flat", label = "One colour for every occupied room" },
+  { value = "off", label = "No background colour" },
+]
+label = "Radar panel shading"
+description = "How the Radar panel's squares are filled. 'Shade by score' walks the colours below from cold to hot. 'One colour' fills every occupied room with the score 1 colour, so set that one to change it."
+
+# One box per band rather than a comma-separated list: the bands are what a
+# user actually thinks in, and a single malformed entry then costs one colour
+# instead of all five. Each falls back to its shipped default if it isn't a
+# hex code.
+[settings.radar_colour_1]
+type = "string"
+default = "#16244f"
+label = "Radar colour — score 1"
+description = "Hex colour for a square worth 1. Keep it dark; squares carry pale text on top. Also the colour used by the 'one colour for every occupied room' shading mode."
+
+[settings.radar_colour_2]
+type = "string"
+default = "#3a1a5e"
+label = "Radar colour — score 2-3"
+description = "Hex colour for a square worth 2 or 3."
+
+[settings.radar_colour_3]
+type = "string"
+default = "#661a52"
+label = "Radar colour — score 4-6"
+description = "Hex colour for a square worth 4 to 6."
+
+[settings.radar_colour_4]
+type = "string"
+default = "#8c1f33"
+label = "Radar colour — score 7-10"
+description = "Hex colour for a square worth 7 to 10."
+
+[settings.radar_colour_5]
+type = "string"
+default = "#9c3000"
+label = "Radar colour — score 11+"
+description = "Hex colour for a square worth 11 or more."
 
 [settings.max_rooms]
 type = "number"

@@ -1,7 +1,8 @@
 -- Discworld MDT — entry point.
 --
 -- Wires three things together:
---   1. The "Nearby" panel, fed by GMCP room.writtenmap pushes.
+--   1. The "Nearby" and "Radar" panels, fed by GMCP room.writtenmap
+--      pushes — same data, two layouts.
 --   2. The mdt slash commands (mdt add / remove / list / clear).
 --   3. The inline map-door-text trigger, which gags the textual sentinel
 --      line and re-emits a styled version in the game-output pane.
@@ -16,8 +17,53 @@ local commands  = require("commands")
 local inline    = require("inline")
 local panelgate = require("panelgate")
 
+-- Two panels over one data stream: "Nearby" renders the scored rows,
+-- "Radar" renders the same rooms as a 5x5 grid. Every push goes to both,
+-- so a user can dock either or both and each is correct as soon as it is
+-- opened. A panel that isn't in the layout simply has nowhere to draw.
 local panel = mud.panel("mdt")
+local grid_panel = mud.panel("grid")
 local gate = panelgate.new()
+
+local function post_both(name, data)
+  panel:post(name, data)
+  grid_panel:post(name, data)
+end
+
+-- ─── Radar appearance ───────────────────────────────────────────────────
+
+-- Shipped ramp, also the per-band fallback: a bad hex code costs you that one
+-- colour, not the panel and not the other four.
+local DEFAULT_RADAR_COLOURS = { "#16244f", "#3a1a5e", "#661a52", "#8c1f33", "#9c3000" }
+
+local function radar_colours()
+  local out = {}
+  for i, fallback in ipairs(DEFAULT_RADAR_COLOURS) do
+    local value = settings.get("radar_colour_" .. i)
+    if type(value) == "string" then
+      value = value:match("^%s*(.-)%s*$")
+      -- Accept a bare "16244f" too; the hash is easy to leave off.
+      if value:match("^%x%x%x$") or value:match("^%x%x%x%x%x%x$") then
+        value = "#" .. value
+      end
+    end
+    if type(value) == "string" and
+       (value:match("^#%x%x%x$") or value:match("^#%x%x%x%x%x%x$")) then
+      out[i] = value
+    else
+      out[i] = fallback
+    end
+  end
+  return out
+end
+
+-- Only the Radar panel reads this; the Nearby panel ignores it. Sent with
+-- every push so a panel opened later is styled correctly on its first frame.
+local function radar_config()
+  local shading = settings.get("radar_shading")
+  if shading ~= "flat" and shading ~= "off" then shading = "gradient" end
+  return { shading = shading, colours = radar_colours() }
+end
 
 -- Flatten the pipeline's scored output to the panel's shape and push it.
 -- Both the GMCP room.writtenmap path and the inline map-door-text trigger
@@ -36,7 +82,7 @@ local function push_panel(scored)
     }
   end
   if not panelgate.should_post(gate, rooms) then return end
-  panel:post("rooms", { rooms = rooms })
+  post_both("rooms", { rooms = rooms, radar = radar_config() })
 end
 
 -- ─── GMCP wiring ─────────────────────────────────────────────────────────
@@ -67,7 +113,13 @@ end
 -- at the top of pipeline.score_payload(), so a re-score picks up new values
 -- with no restart. (Registering a handler also opts out of the host's
 -- restart-on-change default.)
-settings.on("change", refresh)
+-- The Radar's appearance settings don't change the scored rooms at all, so
+-- the panel gate would see an identical signature and swallow the push. Clear
+-- the baseline first: a settings change is exactly when a re-post is wanted.
+settings.on("change", function()
+  panelgate.reset(gate)
+  refresh()
+end)
 
 gmcp.on("room.writtenmap", function(_pkg, payload)
   if type(payload) ~= "string" then
@@ -79,7 +131,7 @@ gmcp.on("room.writtenmap", function(_pkg, payload)
   -- entity-list variant. Route it to its own panel view instead of
   -- feeding the entity parser garbage.
   if parser.is_terrain(payload) then
-    panel:post("terrain", { rows = parser.parse_terrain(payload) })
+    post_both("terrain", { rows = parser.parse_terrain(payload) })
     -- The panel is now in map mode, so the next entity frame MUST re-post to
     -- switch it back to nearby-text mode — even when that frame is identical
     -- to the last one seen before going overboard (climbing back aboard the
@@ -99,5 +151,25 @@ end)
 -- ─── Commands + inline trigger ──────────────────────────────────────────
 
 inline.register(push_panel)
+
+-- ─── Initial paint ──────────────────────────────────────────────────────
+
+-- Without this the panels stay blank from a plugin reload (or a mid-session
+-- enable) until the next room change, which reads as "it isn't working" when
+-- you are standing still. Mallard mirrors the last GMCP frame per package, so
+-- the current room's writtenmap is already there for the asking.
+--
+-- Wrapped: gmcp.get is permission-checked against the full key it is given
+-- and a refusal raises rather than returning nil, which would take the whole
+-- entry file down over a convenience. Nothing here is load-bearing — without
+-- it the panels simply fill on the next move, as they did before.
+local ok, seed = pcall(gmcp.get, "room.writtenmap")
+if ok and type(seed) == "string" and seed ~= "" then
+  if parser.is_terrain(seed) then
+    post_both("terrain", { rows = parser.parse_terrain(seed) })
+  else
+    render_payload(seed)
+  end
+end
 
 commands.register(refresh)
