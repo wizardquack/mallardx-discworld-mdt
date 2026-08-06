@@ -60,14 +60,24 @@ end
 
 -- Only the Radar panel reads this; the Nearby panel ignores it. Sent with
 -- every push so a panel opened later is styled correctly on its first frame.
+--
+-- Cached, because it is otherwise rebuilt on every room move — six settings
+-- reads plus a fresh table and the hex-parsing in radar_colours() — purely to
+-- attach a value that only changes on a settings change. The cache is dropped
+-- there (see settings.on("change") below), so the movement hot path just
+-- returns the built table.
+local radar_config_cache = nil
+
 local function radar_config()
+  if radar_config_cache then return radar_config_cache end
   local shading = settings.get("radar_shading")
   if shading ~= "flat" and shading ~= "off" then shading = "gradient" end
-  return {
+  radar_config_cache = {
     shading = shading,
     colours = radar_colours(),
     grouped = settings.get("radar_group_names") == true,
   }
+  return radar_config_cache
 end
 
 -- Flatten the pipeline's scored output to the panel's shape and push it.
@@ -122,6 +132,7 @@ end
 -- the panel gate would see an identical signature and swallow the push. Clear
 -- the baseline first: a settings change is exactly when a re-post is wanted.
 settings.on("change", function()
+  radar_config_cache = nil
   panelgate.reset(gate)
   refresh()
 end)
