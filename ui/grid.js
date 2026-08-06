@@ -115,8 +115,18 @@ function groupEntities(entities) {
   const order = [];
   for (const e of entities) {
     const label = (e.label || "").toLowerCase();
-    const match = label.match(/([a-z0-9]+)[^a-z0-9]*$/);
-    const key = match ? match[1] : label;
+    // Discworld tags a short description with its state - "a roguish thief
+    // (hiding)", "(sleeping)", "(fighting)" - and that parenthetical is not
+    // the noun. Strip trailing ones before keying, or every hidden thief in
+    // the city groups together as "hiding".
+    let name = label;
+    let stripped = name.replace(/\s*\([^()]*\)\s*$/, "");
+    while (stripped !== name && stripped !== "") {
+      name = stripped;
+      stripped = name.replace(/\s*\([^()]*\)\s*$/, "");
+    }
+    const match = name.match(/([a-z0-9]+)[^a-z0-9]*$/);
+    const key = match ? match[1] : name;
     let group = groups.get(key);
     if (!group) {
       group = { word: key, count: 0, colour: e.colour || "" };
