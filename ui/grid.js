@@ -75,6 +75,7 @@ const HEAT_MIN = [1, 2, 4, 7, 11];
 // rather than an inline colour whenever it can be.
 let shading = "gradient";
 let colours = ["", "", "", "", ""];
+let grouped = false;
 
 // Band index for a score, or -1 for a square that gets no fill at all.
 function heatBand(score) {
@@ -99,6 +100,71 @@ function applyHeat(el, score) {
   } else {
     el.classList.add("heat-" + (band + 1));
   }
+}
+
+// ─── grouped names ────────────────────────────────────────────────────────
+
+// Collapse a square's entities into counted groups keyed on the last word of
+// each name, so "angry hoplite" and "sassy hoplite" become one "2x hoplite".
+// The last word is the noun in nearly every Discworld short description; it
+// is a heuristic, and it will occasionally split a group you'd want joined
+// ("huge troll" keys on troll, "large troll warrior" on warrior), which is
+// why the full list is still on the square's tooltip.
+function groupEntities(entities) {
+  const groups = new Map();
+  const order = [];
+  for (const e of entities) {
+    const label = (e.label || "").toLowerCase();
+    const match = label.match(/([a-z0-9]+)[^a-z0-9]*$/);
+    const key = match ? match[1] : label;
+    let group = groups.get(key);
+    if (!group) {
+      group = { word: key, count: 0, colour: e.colour || "" };
+      groups.set(key, group);
+      order.push(key);
+    }
+    group.count += e.count > 1 ? e.count : 1;
+    if (!group.colour && e.colour) group.colour = e.colour;
+  }
+  return order.map((k) => groups.get(k));
+}
+
+function groupSpan(group) {
+  const span = document.createElement("span");
+  span.className = "entity " + colourClass(group.colour);
+  if (group.colour && group.colour.startsWith("#")) {
+    span.style.color = group.colour;
+  }
+  const count = document.createElement("span");
+  count.className = "count";
+  count.textContent = group.count + "x";
+  count.style.color = countColour(group.count);
+  span.appendChild(count);
+
+  const word = document.createElement("span");
+  word.className = "gword";
+  word.dataset.full = group.word;
+  word.textContent = group.word;
+  span.appendChild(word);
+  return span;
+}
+
+// Squares are only as big as the panel makes them, so the names get as much
+// room as they can have: full words where they fit, clipped to three letters
+// where they don't. Done by measuring after layout rather than guessing from
+// character counts, and re-run whenever the grid is resized.
+function fitGroupedCells() {
+  for (const el of gridEl.querySelectorAll(".cell.grouped")) {
+    const words = el.querySelectorAll(".gword");
+    if (words.length === 0) continue;
+    for (const w of words) w.textContent = w.dataset.full;
+    if (el.scrollHeight <= el.clientHeight) continue;
+    for (const w of words) w.textContent = w.dataset.full.slice(0, 3);
+  }
+}
+
+if (typeof ResizeObserver === "function") {
+  new ResizeObserver(fitGroupedCells).observe(gridEl);
 }
 
 function countColour(n) {
@@ -177,7 +243,12 @@ function render(rooms) {
 
         const body = document.createElement("div");
         body.className = "cell-entities";
-        for (const e of cell.entities) body.appendChild(entitySpan(e));
+        if (grouped) {
+          el.classList.add("grouped");
+          for (const g of groupEntities(cell.entities)) body.appendChild(groupSpan(g));
+        } else {
+          for (const e of cell.entities) body.appendChild(entitySpan(e));
+        }
         el.appendChild(body);
       } else {
         const label = EDGE_LABELS[x + "," + y];
@@ -194,6 +265,7 @@ function render(rooms) {
   }
 
   gridEl.hidden = false;
+  if (grouped) fitGroupedCells();
   if (offgrid.length > 0) {
     appendRoomRows(offgridEl, offgrid);
     offgridEl.hidden = false;
@@ -225,6 +297,7 @@ window.addEventListener("message", (ev) => {
     if (cfg) {
       if (cfg.shading) shading = cfg.shading;
       if (Array.isArray(cfg.colours) && cfg.colours.length > 0) colours = cfg.colours;
+      grouped = cfg.grouped === true;
     }
     render(m.data.rooms || []);
   } else if (m.name === "terrain") renderTerrain(m.data.rows || []);

@@ -71,6 +71,11 @@ Colours: `red`, `yellow`, `green`, `cyan`, `blue`, `magenta`, `white`, `grey`, p
 - **Default score per entity** — applied to entities matching no entry (default: 1).
 - **Hide rooms scoring below** — threshold for omitting rooms from the panel (default: 0).
 - **Max rooms shown in panel** — caps the visible rows (default: 20).
+- **Shorten and group names in Radar** — collapse each square's contents into
+  counted groups keyed on the last word of each name, so "angry hoplite" and
+  "sassy hoplite" read as `2xhoplite`. Words shorten to three letters only in
+  squares too small to hold them, so a wide panel stays readable. Off by
+  default; the full list is always on the square's tooltip.
 - **Radar panel shading** — shade squares by score, use one colour for every
   occupied room, or no background colour at all.
 - **Radar colour — score 1 / 2-3 / 4-6 / 7-10 / 11+** — one hex colour per
