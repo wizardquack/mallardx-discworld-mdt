@@ -66,31 +66,31 @@ description = "How the Radar panel's squares are filled. 'Shade by score' walks 
 type = "string"
 default = ""
 label = "Radar colour — score 1"
-description = "Hex colour for a square worth 1, e.g. #16244f. Blank follows the theme. Also the colour used by the 'one colour for every occupied room' shading mode."
+description = "Hex colour for a square worth 1, e.g. #2d4a7a. Clear the box to go back to following the theme. Also the colour used by the 'one colour for every occupied room' shading mode."
 
 [settings.radar_colour_2]
 type = "string"
 default = ""
 label = "Radar colour — score 2-3"
-description = "Hex colour for a square worth 2 or 3. Blank follows the theme."
+description = "Hex colour for a square worth 2 or 3. Clear the box to go back to following the theme."
 
 [settings.radar_colour_3]
 type = "string"
 default = ""
 label = "Radar colour — score 4-6"
-description = "Hex colour for a square worth 4 to 6. Blank follows the theme."
+description = "Hex colour for a square worth 4 to 6. Clear the box to go back to following the theme."
 
 [settings.radar_colour_4]
 type = "string"
 default = ""
 label = "Radar colour — score 7-10"
-description = "Hex colour for a square worth 7 to 10. Blank follows the theme."
+description = "Hex colour for a square worth 7 to 10. Clear the box to go back to following the theme."
 
 [settings.radar_colour_5]
 type = "string"
 default = ""
 label = "Radar colour — score 11+"
-description = "Hex colour for a square worth 11 or more. Blank follows the theme."
+description = "Hex colour for a square worth 11 or more. Clear the box to go back to following the theme."
 
 [settings.max_rooms]
 type = "number"
