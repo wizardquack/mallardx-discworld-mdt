@@ -1,14 +1,70 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* The host pushes its theme onto :root as inline custom properties and
+   re-pushes them when the theme changes. The docs name them --mallard-*;
+   existing panels here and in other plugins use the unprefixed names, so
+   everything below reads through a chain that accepts either and falls back
+   to these dark defaults. */
 :root {
   --bg: #1a1a1a;
   --fg: #ddd;
+
+  /* Radar chrome, dark. Overridden wholesale under data-theme="light". */
+  --radar-halo: #000;
+  --radar-ring-1: #202020;
+  --radar-ring-2: #161616;
+  --radar-blip: #3a3a3a;
+  --radar-edge: #3d4a5c;
+  --radar-you-bg: #3d3d42;
+  --radar-you-fg: #f2f2f2;
+  --radar-you-edge: #5f5f66;
+  --radar-hot: #ff9a3c;
+  --radar-chip: rgba(0, 0, 0, 0.45);
+
+  /* Default heat ramp, dark: saturated but held to a low lightness, because
+     squares carry pale text and coloured entity names on top. */
+  --radar-heat-1: #16244f;
+  --radar-heat-2: #3a1a5e;
+  --radar-heat-3: #661a52;
+  --radar-heat-4: #8c1f33;
+  --radar-heat-5: #9c3000;
 }
+
+/* Light theme: the same five hues as tints rather than shadows, since the
+   text sitting on them is now dark. The halo inverts with them — a black
+   glow around dark text on a pale tint would read as a smudge. */
+:root[data-theme="light"] {
+  --radar-halo: #fff;
+  --radar-ring-1: #e9e9e9;
+  --radar-ring-2: #f2f2f2;
+  --radar-blip: #bdbdbd;
+  --radar-edge: #8a97a6;
+  --radar-you-bg: #d6d6dc;
+  --radar-you-fg: #1a1a1a;
+  --radar-you-edge: #a6a6ae;
+  --radar-hot: #c2540a;
+  --radar-chip: rgba(255, 255, 255, 0.6);
+
+  --radar-heat-1: #dde5f8;
+  --radar-heat-2: #e4d9f4;
+  --radar-heat-3: #f4d3ea;
+  --radar-heat-4: #fac9cf;
+  --radar-heat-5: #ffd7b0;
+}
+
 html, body { margin: 0; padding: 0; height: 100%; }
-body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
+body {
+  background: var(--mallard-bg, var(--bg));
+  color: var(--mallard-fg, var(--fg));
+  padding: 4px 6px;
+}
 
 #rooms, #offgrid { display: grid; grid-template-columns: auto auto 1fr; gap: 2px 8px; }
-#offgrid { margin-top: 6px; padding-top: 6px; border-top: 1px solid #333; }
+#offgrid {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--mallard-border, var(--border, #333));
+}
 
 .dir { color: #8af; font-weight: bold; }
 .score { color: #888; text-align: right; }
@@ -46,8 +102,8 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
   flex: 1 1 auto;
   min-height: 0;
   gap: 2px;
-  background: #262626;
-  border: 1px solid #262626;
+  background: var(--mallard-border, var(--border, #262626));
+  border: 1px solid var(--mallard-border, var(--border, #262626));
   border-radius: 3px;
 }
 /* The off-grid strip takes what it needs up to a third of the panel and
@@ -61,23 +117,30 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
 .grid-panel #terrain-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
 .cell {
-  background: var(--bg);
+  background: var(--mallard-bg, var(--bg));
   overflow: hidden;
   padding: 2px 4px;
   line-height: 1.25;
   min-width: 0;
-  color: #eee;
+  color: var(--mallard-fg, var(--fg));
   border-radius: 2px;
-  /* Cell backgrounds shade with score, so entity colours have to stay
-     legible against anything from near-black to burnt orange. A dark halo
-     does that without dulling the colours themselves. */
-  text-shadow: 0 0 2px #000, 0 0 3px #000;
+  /* Squares are shaded by score, so entity colours have to stay legible
+     against every step of the ramp. A halo in the opposite direction to the
+     text does that without dulling the colours themselves. */
+  text-shadow: 0 0 2px var(--radar-halo), 0 0 3px var(--radar-halo);
 }
 /* Two rings of depth: the eight rooms you can reach in one step sit on a
-   slightly lighter ground than the ring beyond them, so distance reads
-   before you've read a single name. Filled squares paint over this. */
-.cell.ring1 { background: #202020; }
-.cell.ring2 { background: #161616; }
+   different ground from the ring beyond them, so distance reads before
+   you've read a single name. Filled squares paint over this. */
+.cell.ring1 { background: var(--radar-ring-1); }
+.cell.ring2 { background: var(--radar-ring-2); }
+/* Default heat, themed. A colour set in the plugin's settings is applied
+   inline by grid.js and wins over these. */
+.cell.heat-1 { background: var(--radar-heat-1); }
+.cell.heat-2 { background: var(--radar-heat-2); }
+.cell.heat-3 { background: var(--radar-heat-3); }
+.cell.heat-4 { background: var(--radar-heat-4); }
+.cell.heat-5 { background: var(--radar-heat-5); }
 /* An empty square still means something — a room with nobody in it — so it
    gets a faint blip rather than being left blank. */
 .cell.blank, .cell.edge {
@@ -85,10 +148,10 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
   align-items: center;
   justify-content: center;
 }
-.cell.blank::before { content: "·"; color: #3a3a3a; font-size: 1.5em; }
+.cell.blank::before { content: "·"; color: var(--radar-blip); font-size: 1.5em; }
 /* Compass letters on the four edge squares, shown only while nothing is
    standing there, so orientation is free and never costs a name. */
-.cell.edge { color: #3d4a5c; font-weight: bold; letter-spacing: 1px; }
+.cell.edge { color: var(--radar-edge); font-weight: bold; letter-spacing: 1px; }
 .cell.filled:hover { filter: brightness(1.3); }
 /* One name per line inside a square. The Nearby panel runs them together
    with commas because it has a full row's width; a square is tall and
@@ -96,17 +159,15 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
    comma separator goes with it. */
 .cell .entity { display: block; }
 .cell .entity + .entity::before { content: none; }
-.cell.hot {
-  box-shadow: inset 0 0 0 1px #ff9a3c, 0 0 6px rgba(255, 154, 60, 0.3);
-}
-/* The count sits in a dark chip so it stays readable wherever the heat ramp
-   has put the cell, and doesn't blur into the first name beside it. */
+.cell.hot { box-shadow: inset 0 0 0 1px var(--radar-hot); }
+/* The count sits in a contrasting chip so it stays readable wherever the
+   heat ramp has put the square, and doesn't blur into the name beside it. */
 .cell-count {
   float: right;
   margin-left: 4px;
   padding: 0 3px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--radar-chip);
   font-weight: bold;
   font-size: 0.9em;
 }
@@ -116,15 +177,15 @@ body { background: var(--bg); color: var(--fg); padding: 4px 6px; }
    room with one thing in it. Grey belongs to no band, and a thin light edge
    lifts it off the grid without glaring. */
 .cell.you {
-  background: #3d3d42;
-  color: #f2f2f2;
+  background: var(--radar-you-bg);
+  color: var(--radar-you-fg);
   font-weight: bold;
   font-size: 1.15em;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px #5f5f66;
-  text-shadow: 0 0 3px #000;
+  box-shadow: inset 0 0 0 1px var(--radar-you-edge);
+  text-shadow: 0 0 3px var(--radar-halo);
 }
 
 #empty { color: var(--fg-muted, #777); text-align: center; margin: 24px 0; }

@@ -32,26 +32,27 @@ end
 
 -- ─── Radar appearance ───────────────────────────────────────────────────
 
--- Shipped ramp, also the per-band fallback: a bad hex code costs you that one
--- colour, not the panel and not the other four.
-local DEFAULT_RADAR_COLOURS = { "#16244f", "#3a1a5e", "#661a52", "#8c1f33", "#9c3000" }
+local RADAR_BANDS = 5
 
+-- One entry per band: the user's colour where they have set a valid one, and
+-- an empty string where they haven't. Empty leaves the band to the panel's
+-- own themed default, which is what makes the Radar follow light and dark
+-- themes out of the box. Anything unparseable is treated as unset, so a typo
+-- costs that band its custom colour rather than the panel.
 local function radar_colours()
   local out = {}
-  for i, fallback in ipairs(DEFAULT_RADAR_COLOURS) do
+  for i = 1, RADAR_BANDS do
     local value = settings.get("radar_colour_" .. i)
+    out[i] = ""
     if type(value) == "string" then
       value = value:match("^%s*(.-)%s*$")
       -- Accept a bare "16244f" too; the hash is easy to leave off.
       if value:match("^%x%x%x$") or value:match("^%x%x%x%x%x%x$") then
         value = "#" .. value
       end
-    end
-    if type(value) == "string" and
-       (value:match("^#%x%x%x$") or value:match("^#%x%x%x%x%x%x$")) then
-      out[i] = value
-    else
-      out[i] = fallback
+      if value:match("^#%x%x%x$") or value:match("^#%x%x%x%x%x%x$") then
+        out[i] = value
+      end
     end
   end
   return out

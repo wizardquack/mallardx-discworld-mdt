@@ -59,39 +59,38 @@ choices = [
 label = "Radar panel shading"
 description = "How the Radar panel's squares are filled. 'Shade by score' walks the colours below from cold to hot. 'One colour' fills every occupied room with the score 1 colour, so set that one to change it."
 
-# One box per band rather than a comma-separated list: the bands are what a
-# user actually thinks in, and a single malformed entry then costs one colour
-# instead of all five. Each falls back to its shipped default if it isn't a
-# hex code.
+# One box per band. Left blank, a band uses the panel's own default for the
+# current theme, which is why the Radar follows light and dark without any
+# configuring. A value here overrides that band in every theme.
 [settings.radar_colour_1]
 type = "string"
-default = "#16244f"
+default = ""
 label = "Radar colour — score 1"
-description = "Hex colour for a square worth 1. Keep it dark; squares carry pale text on top. Also the colour used by the 'one colour for every occupied room' shading mode."
+description = "Hex colour for a square worth 1, e.g. #16244f. Blank follows the theme. Also the colour used by the 'one colour for every occupied room' shading mode."
 
 [settings.radar_colour_2]
 type = "string"
-default = "#3a1a5e"
+default = ""
 label = "Radar colour — score 2-3"
-description = "Hex colour for a square worth 2 or 3."
+description = "Hex colour for a square worth 2 or 3. Blank follows the theme."
 
 [settings.radar_colour_3]
 type = "string"
-default = "#661a52"
+default = ""
 label = "Radar colour — score 4-6"
-description = "Hex colour for a square worth 4 to 6."
+description = "Hex colour for a square worth 4 to 6. Blank follows the theme."
 
 [settings.radar_colour_4]
 type = "string"
-default = "#8c1f33"
+default = ""
 label = "Radar colour — score 7-10"
-description = "Hex colour for a square worth 7 to 10."
+description = "Hex colour for a square worth 7 to 10. Blank follows the theme."
 
 [settings.radar_colour_5]
 type = "string"
-default = "#9c3000"
+default = ""
 label = "Radar colour — score 11+"
-description = "Hex colour for a square worth 11 or more."
+description = "Hex colour for a square worth 11 or more. Blank follows the theme."
 
 [settings.max_rooms]
 type = "number"
