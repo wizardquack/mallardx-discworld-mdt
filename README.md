@@ -74,11 +74,12 @@ Colours: `red`, `yellow`, `green`, `cyan`, `blue`, `magenta`, `white`, `grey`, p
 - **Radar panel shading** — shade squares by score, use one colour for every
   occupied room, or no background colour at all.
 - **Radar colour — score 1 / 2-3 / 4-6 / 7-10 / 11+** — one hex colour per
-  band. Keep them dark; squares carry pale text on top. A value that isn't a
-  hex colour falls back to that band's default. The score 1 colour doubles as
-  the fill for the "one colour for every occupied room" mode — that mode means
-  "something is here, never mind how much", which is what the bottom band
-  already says.
+  band. Left blank, a band follows the current theme: saturated darks under a
+  dark theme, tints of the same hues under a light one. A value overrides that
+  band in every theme; anything that isn't a hex colour is treated as blank.
+  The score 1 colour doubles as the fill for the "one colour for every occupied
+  room" mode — that mode means "something is here, never mind how much", which
+  is what the bottom band already says.
 
 ## Storage
 

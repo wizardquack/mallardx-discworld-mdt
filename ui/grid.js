@@ -65,29 +65,40 @@ function gridOffset(direction) {
 // since cells carry pale text and coloured entity names on top and a bright
 // fill would swallow both. The bands assume the default score of 1 per
 // entity, so they read roughly as one, a pair, a few, a crowd, a mob.
-// Score at which each colour in the ramp takes over — one, a pair, a few, a
-// crowd, a mob, assuming the default of a point per entity.
+// Score at which each band takes over — one, a pair, a few, a crowd, a mob,
+// assuming the default of a point per entity.
 const HEAT_MIN = [1, 2, 4, 7, 11];
 
-// Overwritten by whatever Lua sends with each push; these are only what the
-// panel draws with before the first frame arrives.
+// Sent by Lua with each push. `colours` holds a hex code per band where the
+// user has set one and an empty string where they haven't; empty means the
+// themed default in panel.css, which is why the band is applied as a class
+// rather than an inline colour whenever it can be.
 let shading = "gradient";
-let colours = ["#16244f", "#3a1a5e", "#661a52", "#8c1f33", "#9c3000"];
+let colours = ["", "", "", "", ""];
 
-function heatColour(score) {
-  if (shading === "off" || score <= 0) return "";
+// Band index for a score, or -1 for a square that gets no fill at all.
+function heatBand(score) {
+  if (shading === "off" || score <= 0) return -1;
   // Flat shading means "something is here, never mind how much" — which is
-  // what the bottom band already means, so it borrows that colour rather
-  // than needing one of its own.
-  if (shading === "flat") return colours[0];
-  let step = -1;
+  // what the bottom band already says, so it borrows that band rather than
+  // needing a colour of its own.
+  if (shading === "flat") return 0;
+  let band = -1;
   for (let i = 0; i < HEAT_MIN.length; i++) {
-    if (score >= HEAT_MIN[i]) step = i;
+    if (score >= HEAT_MIN[i]) band = i;
   }
-  if (step < 0) return "";
-  // A short colour list just tops out early rather than dropping the
-  // highest bands on the floor.
-  return colours[Math.min(step, colours.length - 1)];
+  return band;
+}
+
+function applyHeat(el, score) {
+  const band = heatBand(score);
+  if (band < 0) return;
+  const custom = colours[band];
+  if (custom) {
+    el.style.background = custom;
+  } else {
+    el.classList.add("heat-" + (band + 1));
+  }
 }
 
 function countColour(n) {
@@ -151,8 +162,7 @@ function render(rooms) {
       const cell = cells.get(x + "," + y);
       if (cell) {
         el.classList.add("filled");
-        const bg = heatColour(cell.score);
-        if (bg) el.style.background = bg;
+        applyHeat(el, cell.score);
         // Outline the busiest square in view. This one is deliberately
         // relative — it answers "where should I go next", which is a
         // question about right now, not about the room in isolation.
