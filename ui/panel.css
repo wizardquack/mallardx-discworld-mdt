@@ -1,28 +1,46 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-/* The host pushes its theme onto :root as inline custom properties and
-   re-pushes them when the theme changes. The docs name them --mallard-*;
-   existing panels here and in other plugins use the unprefixed names, so
-   everything below reads through a chain that accepts either and falls back
-   to these dark defaults. */
+/* Mallard pushes the active theme onto this iframe's :root as inline custom
+   properties and re-pushes them on a theme change; it also sets
+   data-theme="light"|"dark" and a matching color-scheme. The tokens are
+   UNPREFIXED — --bg, --fg, --fg-muted, --border, --link, --accent, plus the
+   16-slot ANSI palette --ansi-0..15 — and a baseline dark set is injected at
+   serve time, so every token is defined before the first paint. The values
+   below are a standalone fallback only (opening the file outside Mallard);
+   the host's inline push outranks them. Everything downstream is built from
+   these tokens, so all fifteen shipped themes — light and dark, near-black to
+   tinted — come through without per-theme code here.
+   See mallard: src/composables/useTheme.ts (themeToCssVars),
+   src/themes.css, src-tauri/src/plugins/webview/mod.rs (baseline block). */
 :root {
   --bg: #1a1a1a;
   --fg: #ddd;
+  --fg-muted: #888;
+  --border: #2a2a2a;
+  --link: #88aaff;
+  --accent: #ff9a3c;
 
-  /* Radar chrome, dark. Overridden wholesale under data-theme="light". */
-  --radar-halo: #000;
-  --radar-ring-1: #202020;
-  --radar-ring-2: #161616;
-  --radar-blip: #3a3a3a;
-  --radar-edge: #3d4a5c;
-  --radar-you-bg: #3d3d42;
-  --radar-you-fg: #f2f2f2;
-  --radar-you-edge: #5f5f66;
-  --radar-hot: #ff9a3c;
-  --radar-chip: rgba(0, 0, 0, 0.45);
+  /* Radar chrome, derived from the theme so it tracks each palette's actual
+     background and foreground rather than assuming near-black or near-white.
+     Mixing a few percent of --fg into --bg lifts a surface off the ground; the
+     host itself uses this color-mix idiom. Because they resolve from --bg/--fg,
+     the light base needs no override — they invert on their own. */
+  --radar-halo: var(--bg);                                       /* text shadow = the background, to lift names off heat */
+  --radar-ring-1: color-mix(in srgb, var(--fg) 7%, var(--bg));
+  --radar-ring-2: color-mix(in srgb, var(--fg) 3%, var(--bg));
+  --radar-blip:   color-mix(in srgb, var(--fg) 25%, var(--bg));
+  --radar-edge:   color-mix(in srgb, var(--fg) 42%, var(--bg));
+  --radar-you-bg:   color-mix(in srgb, var(--fg) 18%, var(--bg));
+  --radar-you-fg:   var(--fg);
+  --radar-you-edge: color-mix(in srgb, var(--fg) 38%, var(--bg));
+  --radar-hot:  var(--accent);                                   /* "go here" outline, in the theme's accent */
+  --radar-chip: color-mix(in srgb, var(--bg) 55%, transparent);
 
-  /* Default heat ramp, dark: saturated but held to a low lightness, because
-     squares carry pale text and coloured entity names on top. */
+  /* Default heat ramp, dark: a deliberate five-step gradient (cold indigo →
+     hot rust) held to a low lightness, because squares carry pale text and
+     coloured entity names on top. Kept as a designed scale rather than theme
+     ANSI so the bands read as one ordered ramp; a user colour (plugin
+     settings) overrides any band, and the light base gets its own tints. */
   --radar-heat-1: #16244f;
   --radar-heat-2: #3a1a5e;
   --radar-heat-3: #661a52;
@@ -30,21 +48,10 @@
   --radar-heat-5: #9c3000;
 }
 
-/* Light theme: the same five hues as tints rather than shadows, since the
-   text sitting on them is now dark. The halo inverts with them — a black
-   glow around dark text on a pale tint would read as a smudge. */
+/* Light base: only the heat ramp still needs a hand-tuned set — the same five
+   hues as tints rather than shadows, since the text over them is now dark. The
+   rest of the chrome derives from --bg/--fg above and adapts on its own. */
 :root[data-theme="light"] {
-  --radar-halo: #fff;
-  --radar-ring-1: #e9e9e9;
-  --radar-ring-2: #f2f2f2;
-  --radar-blip: #bdbdbd;
-  --radar-edge: #8a97a6;
-  --radar-you-bg: #d6d6dc;
-  --radar-you-fg: #1a1a1a;
-  --radar-you-edge: #a6a6ae;
-  --radar-hot: #c2540a;
-  --radar-chip: rgba(255, 255, 255, 0.6);
-
   --radar-heat-1: #dde5f8;
   --radar-heat-2: #e4d9f4;
   --radar-heat-3: #f4d3ea;
@@ -54,8 +61,8 @@
 
 html, body { margin: 0; padding: 0; height: 100%; }
 body {
-  background: var(--mallard-bg, var(--bg));
-  color: var(--mallard-fg, var(--fg));
+  background: var(--bg);
+  color: var(--fg);
   padding: 4px 6px;
 }
 
@@ -63,32 +70,39 @@ body {
 #offgrid {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--mallard-border, var(--border, #333));
+  border-top: 1px solid var(--border);
 }
 
-.dir { color: #8af; font-weight: bold; }
-.score { color: #888; text-align: right; }
+.dir { color: var(--link); font-weight: bold; }
+.score { color: var(--fg-muted); text-align: right; }
 .entities { white-space: normal; }
 
 .entity { display: inline; }
-.entity + .entity::before { content: ", "; color: #555; }
+.entity + .entity::before { content: ", "; color: color-mix(in srgb, var(--fg-muted) 60%, transparent); }
 .count { margin-right: 2px; }
 
-.c-red     { color: #f55; }
-.c-yellow  { color: #fd5; }
-.c-green   { color: #5f5; }
-.c-cyan    { color: #5ff; }
-.c-blue    { color: #88f; }
-.c-magenta { color: #f5f; }
-.c-white   { color: #fff; }
-.c-grey    { color: #888; }
-.c-bold-red     { color: #f55; font-weight: bold; }
-.c-bold-yellow  { color: #fd5; font-weight: bold; }
-.c-bold-green   { color: #5f5; font-weight: bold; }
-.c-bold-cyan    { color: #5ff; font-weight: bold; }
-.c-bold-blue    { color: #88f; font-weight: bold; }
-.c-bold-magenta { color: #f5f; font-weight: bold; }
-.c-bold-white   { color: #fff; font-weight: bold; }
+/* Entity name palette — the plugin's named-colour vocabulary (mdt add <pat>
+   <colour>), mapped onto the host's theme ANSI slots so a name reads in the
+   chosen theme's own red/green/… and stays consistent with the terminal and
+   other plugins. The bright slots (9–15) match the vivid hexes these were; the
+   fallbacks keep the file legible opened standalone. grey has no ANSI of its
+   own, so it borrows the muted foreground. The count badges on the Radar reuse
+   these same classes (see grid.js countClass), so they track the palette too. */
+.c-red     { color: var(--ansi-9,  #f55); }
+.c-yellow  { color: var(--ansi-11, #fd5); }
+.c-green   { color: var(--ansi-10, #5f5); }
+.c-cyan    { color: var(--ansi-14, #5ff); }
+.c-blue    { color: var(--ansi-12, #88f); }
+.c-magenta { color: var(--ansi-13, #f5f); }
+.c-white   { color: var(--ansi-15, #fff); }
+.c-grey    { color: var(--fg-muted, #888); }
+.c-bold-red     { color: var(--ansi-9,  #f55); font-weight: bold; }
+.c-bold-yellow  { color: var(--ansi-11, #fd5); font-weight: bold; }
+.c-bold-green   { color: var(--ansi-10, #5f5); font-weight: bold; }
+.c-bold-cyan    { color: var(--ansi-14, #5ff); font-weight: bold; }
+.c-bold-blue    { color: var(--ansi-12, #88f); font-weight: bold; }
+.c-bold-magenta { color: var(--ansi-13, #f5f); font-weight: bold; }
+.c-bold-white   { color: var(--ansi-15, #fff); font-weight: bold; }
 
 /* Radar panel. The grid fills whatever space the panel has: cells stretch
    and squash with it rather than holding a square aspect, because a grid
@@ -102,8 +116,8 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   gap: 2px;
-  background: var(--mallard-border, var(--border, #262626));
-  border: 1px solid var(--mallard-border, var(--border, #262626));
+  background: var(--border);
+  border: 1px solid var(--border);
   border-radius: 3px;
 }
 /* The off-grid strip takes what it needs up to a third of the panel and
@@ -117,12 +131,12 @@ body {
 .grid-panel #terrain-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
 .cell {
-  background: var(--mallard-bg, var(--bg));
+  background: var(--bg);
   overflow: hidden;
   padding: 2px 4px;
   line-height: 1.25;
   min-width: 0;
-  color: var(--mallard-fg, var(--fg));
+  color: var(--fg);
   border-radius: 2px;
   /* Squares are shaded by score, so entity colours have to stay legible
      against every step of the ramp. A halo in the opposite direction to the

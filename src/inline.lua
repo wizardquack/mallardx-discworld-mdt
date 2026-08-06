@@ -13,18 +13,24 @@ local accumulator = require("accumulator")
 
 local M = {}
 
--- Match-list named colours mapped to hex equivalents that visually match
--- panel.css's .c-* classes. mud.span's `fg` accepts hex or ANSI-16 palette
--- names, but our `grey` and `bold-*` vocabulary doesn't line up 1:1 with
--- Mallard's palette — hex keeps the inline output identical to the panel.
-local NAMED_HEX = {
-  red     = "#ff5555",
-  yellow  = "#ffdd55",
-  green   = "#55ff55",
-  cyan    = "#55ffff",
-  blue    = "#8888ff",
-  magenta = "#ff55ff",
-  white   = "#ffffff",
+-- Match-list named colours mapped to the host's ANSI-16 palette *names*.
+-- mud.span's `fg` resolves a palette name to var(--ansi-N), so the inline
+-- output follows the active theme exactly as the panels do — panel.css maps
+-- the same vocabulary onto the same bright slots (--ansi-9..15). The vivid
+-- "light X" (bright) slots match the colours these used to be hardcoded to.
+-- `grey` is the exception: the panel renders it with the theme's muted
+-- foreground (--fg-muted), which the span palette can't name, so it stays a
+-- fixed hex. (The row chrome in emit_row — direction, score, separators — is
+-- the same story: it mirrors the panel's --link/--fg-muted, which have no
+-- ANSI-palette name, so it stays hex and doesn't track the theme.)
+local NAMED_ANSI = {
+  red     = "light red",
+  yellow  = "light yellow",
+  green   = "light green",
+  cyan    = "light cyan",
+  blue    = "light blue",
+  magenta = "light magenta",
+  white   = "light white",
   grey    = "#888888",
 }
 
@@ -33,9 +39,9 @@ local function colour_to_style(colour)
   if colour:sub(1, 1) == "#" then return { fg = colour } end
   local bold_name = colour:match("^bold%-(.+)$")
   if bold_name then
-    return { fg = NAMED_HEX[bold_name] or bold_name, bold = true }
+    return { fg = NAMED_ANSI[bold_name] or bold_name, bold = true }
   end
-  return { fg = NAMED_HEX[colour] or colour }
+  return { fg = NAMED_ANSI[colour] or colour }
 end
 
 -- Tighten "1 nw, 2 w" → "nw, 2w" (mirrors panel.js's formatDirection so

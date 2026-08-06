@@ -146,9 +146,8 @@ function groupSpan(group) {
     span.style.color = group.colour;
   }
   const count = document.createElement("span");
-  count.className = "count";
+  count.className = "count " + countClass(group.count);
   count.textContent = group.count + "x";
-  count.style.color = countColour(group.count);
   span.appendChild(count);
 
   const word = document.createElement("span");
@@ -177,11 +176,15 @@ if (typeof ResizeObserver === "function") {
   new ResizeObserver(fitGroupedCells).observe(gridEl);
 }
 
-function countColour(n) {
-  if (n >= 4) return "#f55";
-  if (n === 3) return "#fd5";
-  if (n === 2) return "#5ff";
-  return "#5f5";
+// Count badge colour tracks the shared entity palette (panel.css .c-*):
+// one → green, a pair → cyan, a few → yellow, a crowd → red. Returned as a
+// class name so those hues live in one place — the stylesheet — rather than
+// a fourth hardcoded copy; retuning a hue there moves the badges with it.
+function countClass(n) {
+  if (n >= 4) return "c-red";
+  if (n === 3) return "c-yellow";
+  if (n === 2) return "c-cyan";
+  return "c-green";
 }
 
 // The grid is always drawn, even with nothing in range. An empty five-by-five
@@ -246,9 +249,8 @@ function render(rooms) {
         el.title = "[" + cell.score + "] " + entityText(cell.entities);
 
         const badge = document.createElement("div");
-        badge.className = "cell-count";
+        badge.className = "cell-count " + countClass(cell.count);
         badge.textContent = String(cell.count);
-        badge.style.color = countColour(cell.count);
         el.appendChild(badge);
 
         const body = document.createElement("div");
