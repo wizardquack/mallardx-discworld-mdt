@@ -159,6 +159,11 @@ body {
    comma separator goes with it. */
 .cell .entity { display: block; }
 .cell .entity + .entity::before { content: none; }
+/* Grouped mode packs counted groups inline instead — "3xwatchman 1xcat" —
+   since a group is short enough that a line each would waste the square. */
+.cell.grouped .entity { display: inline; }
+.cell.grouped .entity + .entity::before { content: " "; }
+.cell.grouped .count { margin-right: 1px; }
 .cell.hot { box-shadow: inset 0 0 0 1px var(--radar-hot); }
 /* The count sits in a contrasting chip so it stays readable wherever the
    heat ramp has put the square, and doesn't blur into the name beside it. */

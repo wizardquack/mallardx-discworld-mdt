@@ -48,6 +48,12 @@ max = 500
 label = "Hide rooms scoring below"
 description = "Rooms whose total score is below this threshold are omitted from the panel."
 
+[settings.radar_group_names]
+type = "bool"
+default = false
+label = "Shorten and group names in Radar"
+description = "Collapse each square's contents into counted groups keyed on the last word of each name - 'angry hoplite' and 'sassy hoplite' become '2xhoplite'. Words shorten to three letters only where the square is too small for them. The full list stays on the square's tooltip."
+
 [settings.radar_shading]
 type = "enum"
 default = "gradient"

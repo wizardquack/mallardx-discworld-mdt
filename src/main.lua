@@ -63,7 +63,11 @@ end
 local function radar_config()
   local shading = settings.get("radar_shading")
   if shading ~= "flat" and shading ~= "off" then shading = "gradient" end
-  return { shading = shading, colours = radar_colours() }
+  return {
+    shading = shading,
+    colours = radar_colours(),
+    grouped = settings.get("radar_group_names") == true,
+  }
 end
 
 -- Flatten the pipeline's scored output to the panel's shape and push it.
